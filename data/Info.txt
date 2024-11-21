@@ -1,0 +1,51 @@
+- Latitude: Koordinate
+- Longitude: Koordinate
+- IstRad: Feature für das ML Modell. Wenn 1, dann war am Unfall ein Fahrrad beteiligt.
+- IstPKW: Feature für das ML Modell. Wenn 1, dann war am Unfall ein PKW beteiligt.
+- IstFuss: Feature für das ML Modell. Wenn 1, dann war am Unfall ein Fußgänger beteiligt.
+- IstKrad: Feature für das ML Modell. Wenn 1, dann war am Unfall ein Kraftrad beteiligt.
+- IstSonstig: Feature für das ML Modell. Wenn 1, dann war am Unfall Sonstiges wie S-Bahn beteiligt.
+- TagKategorie: Feature für das ML Modell. Wenn 1, dann Wochentag, wenn 0, dann Wochenende.
+- Monat: Feature für das ML Modell.
+- Stunde: Feature für das ML Modell.
+- Unfallart: Feature für das ML Modell. 1 = Zusammenstoß mit anfahrendem/anhaltendem/ruhendem Fahrzeug
+										2 = Zusammenstoß mit vorausfahrendem/wartendem Fahrzeug
+										3 = Zusammenstoß mit seitlich in gleicher Richtung fahrendem Fahrzeug
+										4 = Zusammenstoß mit entgegenkommendem Fahrzeug
+										5 = Zusammenstoß mit einbiegendem/kreuzendem Fahrzeug
+										6 = Zusammenstoß zwischen Fahrzeug und Fußgänger
+										7 = Aufprall auf Fahrbahnhindernis
+										8 = Abkommen von Fahrbahn nach rechts
+										9 = Abkommen von Fahrbahn nach links
+										0 = Unfall anderer Art
+- Unfalltyp: Feature für das ML Modell. 1 = Fahrunfall
+										2 = Abbiegeunfall
+										3 = Einbiegen / Kreuzen-Unfall
+										4 = Überschreiten-Unfall
+										5 = Unfall durch ruhenden Verkehr
+										6 = Unfall im Längsverkehr
+										7 = sonstiger Unfall
+- Lichtverhältnisse: Feature für das ML Modell. 0 = Tageslicht
+												1 = Dämmerung
+												2 = Dunkelheit
+- Straßenverhältnisse: Feature für das ML Modell. 0 = trocken
+												  1 = nass/feucht/schlüpfrig
+												  2 = winterglatt
+- Straßenart: Feature für das ML Modell.
+- Stadtteil: Zusatzinformaiton.
+- Jahr: Zusatzinformaiton.
+- Unfallklasse Wahr: wahrer Unfallausgang. 0 = Unfall mit Getöteten
+										   1 = Unfall mit Schwerverletzten
+										   2 = Unfall mit Leichtverletzten
+- Unfallklasse Bestimmt: : ML Output, bestimmte Klasse.
+- Wahrscheinlichkeit Klasse 0: ML Output.
+- Wahrscheinlichkeit Klasse 1: ML Output.
+- Wahrscheinlichkeit Klasse 2: ML Output.
+- Unsicherheits-Score: Berechneter score für die Unsicherheit aus den 3 Wahrscheinlichkeiten.
+- Base-Value Klasse 0: ML Output. Durchschnittliche Wahrscheinlichkeit für Klasse 0.
+- SHAP_0_*X*: XAI Output. SHAP werte für jedes Features zur Erklärung der Wahrscheinlichkeit von Klasse 0.
+- Base-Value Klasse 1: ML Output. Durchschnittliche Wahrscheinlichkeit für Klasse 1.
+- SHAP_1_*X*: XAI Output. SHAP werte für jedes Features zur Erklärung der Wahrscheinlichkeit von Klasse 1.
+- Base-Value Klasse 2: ML Output. Durchschnittliche Wahrscheinlichkeit für Klasse 2.
+- SHAP_2_*X*: XAI Output. SHAP werte für jedes Features zur Erklärung der Wahrscheinlichkeit von Klasse 2.
+
