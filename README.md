@@ -10,5 +10,9 @@ conda activate infovis
 
 conda install dash plotly.express pandas
 
+# Oder mit pip
+
+pip install -r requirements.txt
+
 python main.py
 ```
