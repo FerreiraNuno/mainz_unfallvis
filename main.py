@@ -1,6 +1,7 @@
 from dash import Dash, dcc, html, Input, Output
 import plotly.express as px
 import pandas as pd
+from datetime import datetime
 import consts as CONSTS
 
 # Create Dash app
@@ -32,7 +33,7 @@ def prepare_map(attr_to_color_by, coloring_map, data):
     Input('year_range_slider', 'value')
     )
 def update_map(year):
-    if(year != None):
+    if year is not None:
         filtered_data = accidents_data.loc[lambda x : (x[CONSTS.JAHR] >= year[0] ) & (x[CONSTS.JAHR] <= year[1])] 
         return prepare_map(CONSTS.UNFALLKLASSE_WAHR, {"0": "red", "1": "yellow", "2": "green"}, filtered_data)
     return prepare_map(CONSTS.UNFALLKLASSE_WAHR, {"0": "red", "1": "yellow", "2": "green"}, accidents_data)
@@ -40,7 +41,7 @@ def update_map(year):
 
 app.layout = html.Div([
     html.H4('Unfall-Dashboard'),
-    dcc.Graph(id="map"),
+    dcc.Graph(id="map", figure=prepare_map(CONSTS.UNFALLKLASSE_WAHR, {"0": "red", "1": "yellow", "2": "green"}, accidents_data)),
     dcc.RangeSlider(id="year_range_slider", min=accidents_data[CONSTS.JAHR].min(), max=accidents_data[CONSTS.JAHR].max(), value=[accidents_data[CONSTS.JAHR].min(), accidents_data[CONSTS.JAHR].max()], step=1, marks=marks_time_range_slider),
 ])
 
