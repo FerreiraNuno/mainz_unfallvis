@@ -18,7 +18,7 @@ marks_time_range_slider = dict([(i,x) for i, x in zip(accidents_data[CONSTS.JAHR
 
 def prepare_map(attr_to_color_by, coloring_map, data):
     # Add scatter map with coordinates of accidents
-    map = px.scatter_map(data, lat=CONSTS.LATITUDE, lon=CONSTS.LONGITUDE, hover_name="Stadtteil", hover_data=[CONSTS.STUNDE, CONSTS.MONAT, CONSTS.JAHR, CONSTS.ISTRAD, CONSTS.ISTPKW, CONSTS.ISTFUSS, CONSTS.ISTKRAD, CONSTS.ISTSONSTIG],
+    map = px.scatter_map(data, lat=CONSTS.LATITUDE, lon=CONSTS.LONGITUDE, hover_name="Stadtteil", hover_data=[CONSTS.JAHR, CONSTS.UNFALLKLASSE_BESTIMMT,CONSTS.WAHRSCHEINLICHKEIT_KLASSE_0, CONSTS.WAHRSCHEINLICHKEIT_KLASSE_1, CONSTS.WAHRSCHEINLICHKEIT_KLASSE_2, CONSTS.UNSICHERHEITS_SCORE],
                     zoom=12, color=attr_to_color_by, color_discrete_map=coloring_map)
     # Set background map style
     map.update_layout(map_style="https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json") # API-Key not needed while running on localhost https://docs.stadiamaps.com/themes/
@@ -46,7 +46,7 @@ app.layout = html.Div([
 
 
 def main():
-    app.run_server(debug=True, port=8081)
+    app.run_server(debug=False, port=8081)
 
 if __name__ == "__main__":
     main()
