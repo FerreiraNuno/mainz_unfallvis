@@ -63,3 +63,8 @@ SHAP_2_UNFALLTYP="SHAP_2_Unfalltyp"
 SHAP_2_LICHTVERHAELTNISSE="SHAP_2_Lichtverhältnisse"
 SHAP_2_STRASSENVERHAELTNISSE="SHAP_2_Straßenverhältnisse"
 SHAP_2_STRASSENART="SHAP_2_Straßenart"
+
+#
+# Keys of Custom Columns
+#
+CUSTOM_DATETIME='datetime'

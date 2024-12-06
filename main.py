@@ -3,6 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import consts as CONSTS
+from datetime import datetime
 
 # Create Dash app
 app = Dash(__name__)
@@ -10,6 +11,8 @@ app = Dash(__name__)
 accidents_data = pd.read_csv("./data/Verkehrsunfalldaten.csv", delimiter=';', decimal=',')
 # Prepare data
 accidents_data[CONSTS.UNFALLKLASSE_WAHR] = accidents_data[CONSTS.UNFALLKLASSE_WAHR].astype(str)
+
+accidents_data[CONSTS.CUSTOM_DATETIME] = pd.to_datetime({'year': accidents_data[CONSTS.JAHR], 'month': accidents_data[CONSTS.MONAT], 'day': 1}) #prepare datetime column
 
 
 def prepare_map(attr_to_color_by, coloring_map, data):
@@ -39,12 +42,16 @@ def prepare_map(attr_to_color_by, coloring_map, data):
 
 @app.callback(
     Output('map', 'figure'),
+    Input('year_range_slider', 'marks'),
     Input('year_range_slider', 'value')
 )
-def update_map(year):
-    if year is not None:
+def update_map(marks_dict, values):
+    if None not in (marks_dict, values):
+        marks_dict = dict(marks_dict)
+        start = datetime.strptime(marks_dict.get(str(values[0]))["label"], '%m-%Y') #create datetime objects to compare against
+        end = datetime.strptime(marks_dict.get(str(values[1]))["label"], '%m-%Y') 
         filtered_data = accidents_data.loc[
-            lambda x: (x[CONSTS.JAHR] >= year[0]) & (x[CONSTS.JAHR] <= year[1])
+            lambda x: ((x[CONSTS.CUSTOM_DATETIME] >= start) & (x[CONSTS.CUSTOM_DATETIME] <= end))
         ]
         return prepare_map(CONSTS.UNFALLKLASSE_WAHR, {"0": "red", "1": "yellow", "2": "green"}, filtered_data)
     return prepare_map(CONSTS.UNFALLKLASSE_WAHR, {"0": "red", "1": "yellow", "2": "green"}, accidents_data)
@@ -85,8 +92,15 @@ def update_bar_chart(hover_data):
     return go.Figure()
 
 
+def generateMonthAndYearMarks():
+    start = str(accidents_data[CONSTS.JAHR].min()) + '-' + str(accidents_data[CONSTS.MONAT].min()) + '-' + '1'
+    end = str(accidents_data[CONSTS.JAHR].max()) + '-' + str(accidents_data[CONSTS.MONAT].max()) + '-' + '1' 
+    month_year_range = pd.date_range(start=start, end=end, freq='QS') # QS DateOffset Quarter Starting
+
+    return {each : {"label": str(date), "style": {"transform": "rotate(45deg)"}} for each, date in enumerate(month_year_range.unique().strftime('%m-%Y'))}
 
 def main():
+  marksMonthYear = generateMonthAndYearMarks()
   # Set Dash layout for displaying the map and the bar chart
   app.layout = html.Div([
       html.H4('Unfall-Dashboard'),
@@ -96,11 +110,10 @@ def main():
       ], style={'display': 'flex'}),
       dcc.RangeSlider(
           id="year_range_slider",
-          min=accidents_data[CONSTS.JAHR].min(),
-          max=accidents_data[CONSTS.JAHR].max(),
-          value=[accidents_data[CONSTS.JAHR].min(), accidents_data[CONSTS.JAHR].max()],
+          min=0,
+          max=len(marksMonthYear)-1,
           step=1,
-          marks=dict([(i, x) for i, x in zip(accidents_data[CONSTS.JAHR], accidents_data[CONSTS.JAHR].astype(str))])
+          marks=marksMonthYear
       )
   ])
   
