@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output
+from dash import Dash, dcc, html, Input, Output, no_update
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -60,6 +60,11 @@ def prepare_map(attr_to_color_by, data):
         zoom=12,
         color=attr_to_color_by,
         color_discrete_sequence=customColoringMap.get(attr_to_color_by),
+        color_discrete_map={
+            "0": "red",
+            "1": "orange",
+            "2": "green",
+        },
     )
     map_fig.update_layout(
         mapbox_style="https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json",
@@ -140,11 +145,14 @@ def update_bar_chart(click_data):
                 y="Value",
                 title="Vorhersage nach Unfallklasse",
             )
+            fig.update_yaxes(title_text="Berechnete Wahrscheinlichkeit in %")
+            fig.update_traces(marker_color=["red", "orange", "green"])
             #fig.update_layout(height=800)
             return fig
 
     # Default empty figure
-    return go.Figure()
+    return no_update
+    #return go.Figure()
 
 @app.callback(
     Output("bar-chart-accident-participants", "figure"), 
@@ -177,19 +185,41 @@ def update_accident_participants_bar_chart(click_data):
                 }
             )
 
+            # Add a custom color column based on "Value"
+            bar_data["Color"] = bar_data["Value"].apply(
+                lambda x: "blue" #if x != 1 else "darkblue"
+            )
+
             # Create bar chart
             fig = px.bar(
                 bar_data,
                 x="Beteiligte",
                 y="Value",
                 title="Unfallbeteiligte",
+                #text="Value",  # Display values on bars
             )
-            #fig.update_layout(height=800)
-            fig.update_traces(marker_color='blue', marker_line_color='blue', marker_line_width = 12)
+
+            # Update the layout and appearance
+            fig.update_traces(
+                marker_color=bar_data["Color"],  # Use custom colors
+                #texttemplate="%{text}",  # Format text on bars
+                textposition="outside",  # Position the text outside the bar
+            )
+            fig.update_layout(
+                yaxis=dict(
+                    tickmode="array",
+                    tickvals=[0, 1],
+                    ticktext=["Unbeteiligt", "Beteiligt"],  # Custom labels
+                ),
+                height=300,
+            )
+
             return fig
 
+
     # Default empty figure
-    return go.Figure()
+    #return go.Figure()
+    return no_update
 
 def generateMonthAndYearMarks(df):
     start = str(df[CONSTS.JAHR].min()) + "-" + str(df[CONSTS.MONAT].min()) + "-" + "1"
@@ -210,7 +240,7 @@ def main():
     # Set Dash layout for displaying the map and the bar chart
     app.layout = html.Div(
         [
-            html.H4("Unfall-Dashboard"),
+            html.H3("Unfall-Dashboard"),
             dbc.Row(
                 [
                     dbc.Col(
