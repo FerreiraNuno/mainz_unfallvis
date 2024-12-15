@@ -7,11 +7,24 @@ from datetime import datetime
 import dash_bootstrap_components as dbc
 
 # Create Dash app
-app = Dash(__name__, suppress_callback_exceptions=True)
+app = Dash(__name__, external_stylesheets = [dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 
 # Load data
 accidents_data = pd.read_csv("./data/Verkehrsunfalldaten.csv", delimiter=";", decimal=",")
 
+def generateDateRangeByMinAndMaxDate(df):
+    start = str(df[CONSTS.JAHR].min()) + "-" + str(df[CONSTS.MONAT].min()) + "-" + "1"
+    end = str(df[CONSTS.JAHR].max()) + "-" + str(df[CONSTS.MONAT].max()) + "-" + "1"
+    month_year_range = pd.date_range(
+        start=start, end=end, freq="MS"
+    )  # MS DateOffset Monthly Starting
+
+    return {
+        each: {"label": str(date), "style": {'transform': 'rotate(90deg)'}}
+        for each, date in enumerate(month_year_range.unique().strftime("%m.%Y"))
+    }
+
+date_range_monthly = generateDateRangeByMinAndMaxDate(accidents_data)
 
 def init():
     # Prepare data
@@ -67,30 +80,44 @@ def prepare_map(attr_to_color_by, data):
         mapbox_style="https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
+    # Rewrite Labels
+    map_fig.for_each_trace(
+        lambda trace: (
+            trace.update(name=rewriteDict.get(attr_to_color_by)[trace.name])
+            if trace.name in rewriteDict.get(attr_to_color_by)
+            else None
+        )
+    )
     return map_fig
 
 
 @app.callback(
     Output("map", "figure"),
-    Input("year_range_slider", "marks"),
     Input("year_range_slider", "value"),
     Input("highlighting_dropdown", "value"),
+    Input("participants_checklist", "value")
 )
-def update_map(marks_dict, values, highlighting_dropdown):
-    if None not in (marks_dict, values):
-        marks_dict = dict(marks_dict)
+def update_map(values, highlighting_dropdown, participants_checklist):
+    filtered_data = accidents_data
+    if values is not None:
+        marks_dict = dict(date_range_monthly)
         start = datetime.strptime(
-            marks_dict.get(str(values[0]))["label"], "%m-%Y"
-        )
-        end = datetime.strptime(marks_dict.get(str(values[1]))["label"], "%m-%Y")
+            marks_dict.get(values[0])["label"], "%m.%Y"
+        )  # create datetime objects to compare against
+        end = datetime.strptime(marks_dict.get(values[1])["label"], "%m.%Y")
         filtered_data = accidents_data.loc[
             lambda x: (
                 (x[CONSTS.CUSTOM_DATETIME] >= start)
                 & (x[CONSTS.CUSTOM_DATETIME] <= end)
             )
         ]
-        return prepare_map(highlighting_dropdown, filtered_data)
-    return prepare_map(highlighting_dropdown, accidents_data)
+    if participants_checklist is not None:
+        for participant in participants_checklist:
+            filtered_data = filtered_data.loc[
+                lambda x: (
+                (x[participant] == 1)
+            )]
+    return prepare_map(highlighting_dropdown, filtered_data)
 
 
 @app.callback(
@@ -137,10 +164,10 @@ def update_bar_chart(click_data):
 
 
 @app.callback(
-    Output("bar-chart-accident-participants", "figure"), 
+    Output("participants_view_checklist", "value"), 
     Input("map", "clickData")
 )
-def update_accident_participants_bar_chart(click_data):
+def update_particpants_checklist(click_data):
     if click_data:
         hovered_lat = click_data["points"][0]["lat"]
         hovered_lon = click_data["points"][0]["lon"]
@@ -151,61 +178,27 @@ def update_accident_participants_bar_chart(click_data):
         ]
 
         if not point_data.empty:
-            bar_data = pd.DataFrame(
-                {
-                    "Beteiligte": ["IstRad", "IstPKW", "IstFuss", "IstKrad", "IstSonstig"],
-                    "Value": [
-                        point_data[CONSTS.ISTFUSS].values[0],
-                        point_data[CONSTS.ISTKRAD].values[0],
-                        point_data[CONSTS.ISTPKW].values[0],
-                        point_data[CONSTS.ISTRAD].values[0],
-                        point_data[CONSTS.ISTSONSTIG].values[0],
-                    ],
-                }
-            )
+            to_select = list()
+            if point_data[CONSTS.ISTFUSS].values[0] == 1:
+                to_select.append(CONSTS.ISTFUSS)
+            if point_data[CONSTS.ISTKRAD].values[0] == 1:
+                to_select.append(CONSTS.ISTKRAD)
+            if point_data[CONSTS.ISTPKW].values[0] == 1:
+                to_select.append(CONSTS.ISTPKW)
+            if point_data[CONSTS.ISTRAD].values[0] == 1:
+                to_select.append(CONSTS.ISTRAD)
+            if point_data[CONSTS.ISTSONSTIG].values[0] == 1:
+                to_select.append(CONSTS.ISTSONSTIG)
+            return to_select
 
-            bar_data["Color"] = bar_data["Value"].apply(
-                lambda x: "darkblue" if x == 1 else "lightgray"
-            )
+    # Default empty figure
+    return []
 
-            fig = px.bar(
-                bar_data,
-                x="Beteiligte",
-                y="Value",
-                title="Unfallbeteiligte",
-            )
-
-            fig.update_traces(
-                marker_color=bar_data["Color"],
-                textposition="none",
-            )
-            fig.update_layout(
-                yaxis=dict(
-                    tickmode="array",
-                    tickvals=[0, 1],
-                    ticktext=["Unbeteiligt", "Beteiligt"],
-                ),
-                height=300,
-            )
-
-            return fig
-
-    return no_update
-
-
-
-def generateMonthAndYearMarks(df):
-    start = str(df[CONSTS.JAHR].min()) + "-" + str(df[CONSTS.MONAT].min()) + "-" + "1"
-    end = str(df[CONSTS.JAHR].max()) + "-" + str(df[CONSTS.MONAT].max()) + "-" + "1"
-    month_year_range = pd.date_range(
-        start=start, end=end, freq="QS"
-    )
-
-    return {
-        each: {"label": str(date), "style": {"transform": "rotate(45deg)"}}
-        for each, date in enumerate(month_year_range.unique().strftime("%m-%Y"))
-    }
-
+def prepare_marks():
+    marks_dict = {key: value for key, value in date_range_monthly.items() if key % 3 == 0}
+    last_key = list(date_range_monthly.keys())[-1]
+    marks_dict[last_key] = date_range_monthly.get(last_key)
+    return marks_dict
 
 
 # Overview-Tab ------------------------------------------------------------------------------------------------------------------------
@@ -395,22 +388,46 @@ def render_tab_content(tab_value):
             ]
         )
     elif tab_value == "erkunden":
-        marksMonthYear = generateMonthAndYearMarks(accidents_data)
+        marks_dict = prepare_marks()
 
         return html.Div(
             [
                 dbc.Row(
                     [
                         dbc.Col(
-                            [
-                                html.Div(
-                                    dcc.Dropdown(
-                                        highlighting_dropdown,
-                                        id="highlighting_dropdown",
-                                        searchable=False,
-                                        value=highlighting_dropdown[0],
-                                    )
+                        [
+                            html.Div(
+                                dcc.Dropdown(
+                                    highlighting_dropdown,
+                                    id="highlighting_dropdown",
+                                    searchable=False,
+                                    value=highlighting_dropdown[0],
                                 ),
+                            ),
+                            dbc.Row([
+                                dbc.Col(
+                                        html.Div(
+                                            dcc.Checklist(
+                                                participants_checklist,
+                                                id="participants_checklist",
+                                                value=[],
+                                                inline=True,
+                                            )
+                                        ),
+                                    ),
+                                dbc.Col(
+                                        html.Div(
+                                            dcc.Checklist(
+                                                participants_view_checklist,
+                                                id="participants_view_checklist",
+                                                value=[],
+                                                inline=True,
+                                            )
+                                        ),
+                                )   
+                            ], 
+                            className="hstack gap-3"
+                            ),
                                 html.Div(
                                     dcc.Graph(
                                         id="map",
@@ -424,10 +441,10 @@ def render_tab_content(tab_value):
                                     dcc.RangeSlider(
                                         id="year_range_slider",
                                         min=0,
-                                        max=len(marksMonthYear) - 1,
+                                        max=len(date_range_monthly) - 1,
                                         step=1,
-                                        marks=marksMonthYear,
-                                        pushable=1,
+                                        marks=marks_dict,
+                                        pushable=1
                                     )
                                 ),
                             ],
@@ -446,15 +463,13 @@ def render_tab_content(tab_value):
                                 dbc.Row(
                                     dbc.Col(
                                         html.Div(
-                                            dcc.Graph(
-                                                id="bar-chart-accident-participants"
-                                            ),
                                         )
                                     )
                                 ),
                             ],
                         ),
                     ],
+                    style={"align-items": "end"} 
                 )
             ]
         )
