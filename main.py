@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output
+from dash import Dash, dcc, html, Input, Output, no_update
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -73,6 +73,11 @@ def prepare_map(attr_to_color_by, data):
         zoom=12,
         color=attr_to_color_by,
         color_discrete_sequence=customColoringMap.get(attr_to_color_by),
+        color_discrete_map={
+            "0": "red",
+            "1": "orange",
+            "2": "green",
+        },
     )
     map_fig.update_layout(
         mapbox_style="https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json",
@@ -159,11 +164,14 @@ def update_bar_chart(click_data):
                 y="Value",
                 title="Vorhersage nach Unfallklasse",
             )
+            fig.update_yaxes(title_text="Berechnete Wahrscheinlichkeit in %")
+            fig.update_traces(marker_color=["red", "orange", "green"])
             #fig.update_layout(height=800)
             return fig
 
     # Default empty figure
-    return go.Figure()
+    return no_update
+    #return go.Figure()
 
 @app.callback(
     Output("participants_view_checklist", "value"), 
@@ -209,7 +217,7 @@ def main():
     # Set Dash layout for displaying the map and the bar chart
     stack = html.Div(
         [
-            html.H4("Unfall-Dashboard"),
+            html.H3("Unfall-Dashboard"),
             dbc.Row(
                 [
                     dbc.Col(
