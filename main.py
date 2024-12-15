@@ -9,12 +9,25 @@ from datetime import datetime
 import dash_bootstrap_components as dbc
 
 # Create Dash app
-app = Dash(__name__)
+app = Dash(__name__, external_stylesheets = [dbc.themes.BOOTSTRAP])
 
 
 # Load data
 accidents_data = pd.read_csv("./data/Verkehrsunfalldaten.csv", delimiter=";", decimal=",")
 
+def generateDateRangeByMinAndMaxDate(df):
+    start = str(df[CONSTS.JAHR].min()) + "-" + str(df[CONSTS.MONAT].min()) + "-" + "1"
+    end = str(df[CONSTS.JAHR].max()) + "-" + str(df[CONSTS.MONAT].max()) + "-" + "1"
+    month_year_range = pd.date_range(
+        start=start, end=end, freq="MS"
+    )  # MS DateOffset Monthly Starting
+
+    return {
+        each: {"label": str(date), "style": {'transform': 'rotate(90deg)'}}
+        for each, date in enumerate(month_year_range.unique().strftime("%m.%Y"))
+    }
+
+date_range_monthly = generateDateRangeByMinAndMaxDate(accidents_data)
 
 def init():
     # Prepare data
@@ -79,25 +92,31 @@ def prepare_map(attr_to_color_by, data):
 
 @app.callback(
     Output("map", "figure"),
-    Input("year_range_slider", "marks"),
     Input("year_range_slider", "value"),
     Input("highlighting_dropdown", "value"),
+    Input("participants_checklist", "value")
 )
-def update_map(marks_dict, values, highlighting_dropdown):
-    if None not in (marks_dict, values):
-        marks_dict = dict(marks_dict)
+def update_map(values, highlighting_dropdown, participants_checklist):
+    filtered_data = accidents_data
+    if values is not None:
+        marks_dict = dict(date_range_monthly)
         start = datetime.strptime(
-            marks_dict.get(str(values[0]))["label"], "%m-%Y"
+            marks_dict.get(values[0])["label"], "%m.%Y"
         )  # create datetime objects to compare against
-        end = datetime.strptime(marks_dict.get(str(values[1]))["label"], "%m-%Y")
+        end = datetime.strptime(marks_dict.get(values[1])["label"], "%m.%Y")
         filtered_data = accidents_data.loc[
             lambda x: (
                 (x[CONSTS.CUSTOM_DATETIME] >= start)
                 & (x[CONSTS.CUSTOM_DATETIME] <= end)
             )
         ]
-        return prepare_map(highlighting_dropdown, filtered_data)
-    return prepare_map(highlighting_dropdown, accidents_data)
+    if participants_checklist is not None:
+        for participant in participants_checklist:
+            filtered_data = filtered_data.loc[
+                lambda x: (
+                (x[participant] == 1)
+            )]
+    return prepare_map(highlighting_dropdown, filtered_data)
 
 
 @app.callback(
@@ -147,10 +166,10 @@ def update_bar_chart(click_data):
     return go.Figure()
 
 @app.callback(
-    Output("bar-chart-accident-participants", "figure"), 
+    Output("participants_view_checklist", "value"), 
     Input("map", "clickData")
 )
-def update_accident_participants_bar_chart(click_data):
+def update_particpants_checklist(click_data):
     if click_data:
         # Extract latitude and longitude from hoverData
         hovered_lat = click_data["points"][0]["lat"]
@@ -163,52 +182,32 @@ def update_accident_participants_bar_chart(click_data):
         ]
 
         if not point_data.empty:
-            # Prepare data for the bar chart
-            bar_data = pd.DataFrame(
-                {
-                    "Beteiligte": ["IstRad", "IstPKW", "IstFuss", "IstKrad", "IstSonstig"],
-                    "Value": [
-                        point_data[CONSTS.ISTFUSS].values[0],
-                        point_data[CONSTS.ISTKRAD].values[0],
-                        point_data[CONSTS.ISTPKW].values[0],
-                        point_data[CONSTS.ISTRAD].values[0],
-                        point_data[CONSTS.ISTSONSTIG].values[0],
-                    ],
-                }
-            )
-
-            # Create bar chart
-            fig = px.bar(
-                bar_data,
-                x="Beteiligte",
-                y="Value",
-                title="Unfallbeteiligte",
-            )
-            #fig.update_layout(height=800)
-            fig.update_traces(marker_color='blue', marker_line_color='blue', marker_line_width = 12)
-            return fig
+            to_select = list()
+            if point_data[CONSTS.ISTFUSS].values[0] == 1:
+                to_select.append(CONSTS.ISTFUSS)
+            if point_data[CONSTS.ISTKRAD].values[0] == 1:
+                to_select.append(CONSTS.ISTKRAD)
+            if point_data[CONSTS.ISTPKW].values[0] == 1:
+                to_select.append(CONSTS.ISTPKW)
+            if point_data[CONSTS.ISTRAD].values[0] == 1:
+                to_select.append(CONSTS.ISTRAD)
+            if point_data[CONSTS.ISTSONSTIG].values[0] == 1:
+                to_select.append(CONSTS.ISTSONSTIG)
+            return to_select
 
     # Default empty figure
-    return go.Figure()
+    return []
 
-def generateMonthAndYearMarks(df):
-    start = str(df[CONSTS.JAHR].min()) + "-" + str(df[CONSTS.MONAT].min()) + "-" + "1"
-    end = str(df[CONSTS.JAHR].max()) + "-" + str(df[CONSTS.MONAT].max()) + "-" + "1"
-    month_year_range = pd.date_range(
-        start=start, end=end, freq="QS"
-    )  # QS DateOffset Quarter Starting
-
-    return {
-        each: {"label": str(date), "style": {"transform": "rotate(45deg)"}}
-        for each, date in enumerate(month_year_range.unique().strftime("%m-%Y"))
-    }
-
+def prepare_marks():
+    marks_dict = {key: value for key, value in date_range_monthly.items() if key % 3 == 0}
+    last_key = list(date_range_monthly.keys())[-1]
+    marks_dict[last_key] = date_range_monthly.get(last_key)
+    return marks_dict
 
 def main():
-    marksMonthYear = generateMonthAndYearMarks(accidents_data)
-
+    marks_dict = prepare_marks()
     # Set Dash layout for displaying the map and the bar chart
-    app.layout = html.Div(
+    stack = html.Div(
         [
             html.H4("Unfall-Dashboard"),
             dbc.Row(
@@ -221,7 +220,31 @@ def main():
                                     id="highlighting_dropdown",
                                     searchable=False,
                                     value=highlighting_dropdown[0],
-                                )
+                                ),
+                            ),
+                            dbc.Row([
+                                dbc.Col(
+                                        html.Div(
+                                            dcc.Checklist(
+                                                participants_checklist,
+                                                id="participants_checklist",
+                                                value=[],
+                                                inline=True,
+                                            )
+                                        ),
+                                    ),
+                                dbc.Col(
+                                        html.Div(
+                                            dcc.Checklist(
+                                                participants_view_checklist,
+                                                id="participants_view_checklist",
+                                                value=[],
+                                                inline=True,
+                                            )
+                                        ),
+                                )   
+                            ], 
+                            className="hstack gap-3"
                             ),
                             html.Div(
                                 dcc.Graph(
@@ -239,10 +262,10 @@ def main():
                                 dcc.RangeSlider(
                                     id="year_range_slider",
                                     min=0,
-                                    max=len(marksMonthYear) - 1,
+                                    max=len(date_range_monthly) - 1,
                                     step=1,
-                                    marks=marksMonthYear,
-                                    pushable=1,
+                                    marks=marks_dict,
+                                    pushable=1
                                 )
                             ),
                         ],
@@ -264,7 +287,6 @@ def main():
                             dbc.Row(
                                 dbc.Col(
                                     html.Div(
-                                        dcc.Graph(id="bar-chart-accident-participants"),
                                     ),
                                 )
                             ),
@@ -276,7 +298,7 @@ def main():
             ),
         ]
     )
-
+    app.layout = dbc.Container(stack)
     app.run_server(debug=True, port=8081)
 
 

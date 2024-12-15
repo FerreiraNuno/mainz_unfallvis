@@ -89,3 +89,20 @@ highlighting_dropdown = [
     CONSTS.STRASSENART,
     CONSTS.TAGKATEGORIE,
 ]
+
+
+participants_checklist =[
+    {'label': 'Fußgänger', 'value': CONSTS.ISTFUSS},
+    {'label': 'Motorrad', 'value': CONSTS.ISTKRAD},
+    {'label': 'PKW', 'value': CONSTS.ISTPKW},
+    {'label': 'Fahrrad', 'value': CONSTS.ISTRAD},
+    {'label': 'Sonstiges', 'value': CONSTS.ISTSONSTIG},
+]
+
+participants_view_checklist =[
+    {'label': 'Fußgänger', 'value': CONSTS.ISTFUSS, 'disabled':True},
+    {'label': 'Motorrad', 'value': CONSTS.ISTKRAD, 'disabled':True},
+    {'label': 'PKW', 'value': CONSTS.ISTPKW, 'disabled':True},
+    {'label': 'Fahrrad', 'value': CONSTS.ISTRAD, 'disabled':True},
+    {'label': 'Sonstiges', 'value': CONSTS.ISTSONSTIG, 'disabled':True},
+]
