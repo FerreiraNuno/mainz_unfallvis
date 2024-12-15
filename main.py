@@ -1,16 +1,13 @@
 from dash import Dash, dcc, html, Input, Output, no_update
 import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
 import consts as CONSTS
 from config import *
 from datetime import datetime
-
 import dash_bootstrap_components as dbc
 
 # Create Dash app
-app = Dash(__name__)
-
+app = Dash(__name__, suppress_callback_exceptions=True)
 
 # Load data
 accidents_data = pd.read_csv("./data/Verkehrsunfalldaten.csv", delimiter=";", decimal=",")
@@ -68,16 +65,7 @@ def prepare_map(attr_to_color_by, data):
     )
     map_fig.update_layout(
         mapbox_style="https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json",
-        #autosize=False, width=800, height=800, margin={"r": 0, "t": 0, "l": 0, "b": 0},
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-    )
-    # Rewrite Labels
-    map_fig.for_each_trace(
-        lambda trace: (
-            trace.update(name=rewriteDict.get(attr_to_color_by)[trace.name])
-            if trace.name in rewriteDict.get(attr_to_color_by)
-            else None
-        )
     )
     return map_fig
 
@@ -93,7 +81,7 @@ def update_map(marks_dict, values, highlighting_dropdown):
         marks_dict = dict(marks_dict)
         start = datetime.strptime(
             marks_dict.get(str(values[0]))["label"], "%m-%Y"
-        )  # create datetime objects to compare against
+        )
         end = datetime.strptime(marks_dict.get(str(values[1]))["label"], "%m-%Y")
         filtered_data = accidents_data.loc[
             lambda x: (
@@ -111,18 +99,15 @@ def update_map(marks_dict, values, highlighting_dropdown):
 )
 def update_bar_chart(click_data):
     if click_data:
-        # Extract latitude and longitude from hoverData
         hovered_lat = click_data["points"][0]["lat"]
         hovered_lon = click_data["points"][0]["lon"]
 
-        # Filter the dataset to find the corresponding row
         point_data = accidents_data.loc[
             (accidents_data[CONSTS.LATITUDE] == hovered_lat)
             & (accidents_data[CONSTS.LONGITUDE] == hovered_lon)
         ]
 
         if not point_data.empty:
-            # Prepare data for the bar chart
             bar_data = pd.DataFrame(
                 {
                     "Unfallklasse Vorhersage": [
@@ -138,7 +123,6 @@ def update_bar_chart(click_data):
                 }
             )
 
-            # Create bar chart
             fig = px.bar(
                 bar_data,
                 x="Unfallklasse Vorhersage",
@@ -147,12 +131,10 @@ def update_bar_chart(click_data):
             )
             fig.update_yaxes(title_text="Berechnete Wahrscheinlichkeit in %")
             fig.update_traces(marker_color=["red", "orange", "green"])
-            #fig.update_layout(height=800)
             return fig
 
-    # Default empty figure
     return no_update
-    #return go.Figure()
+
 
 @app.callback(
     Output("bar-chart-accident-participants", "figure"), 
@@ -160,18 +142,15 @@ def update_bar_chart(click_data):
 )
 def update_accident_participants_bar_chart(click_data):
     if click_data:
-        # Extract latitude and longitude from hoverData
         hovered_lat = click_data["points"][0]["lat"]
         hovered_lon = click_data["points"][0]["lon"]
 
-        # Filter the dataset to find the corresponding row
         point_data = accidents_data.loc[
             (accidents_data[CONSTS.LATITUDE] == hovered_lat)
             & (accidents_data[CONSTS.LONGITUDE] == hovered_lon)
         ]
 
         if not point_data.empty:
-            # Prepare data for the bar chart
             bar_data = pd.DataFrame(
                 {
                     "Beteiligte": ["IstRad", "IstPKW", "IstFuss", "IstKrad", "IstSonstig"],
@@ -185,48 +164,42 @@ def update_accident_participants_bar_chart(click_data):
                 }
             )
 
-            # Add a custom color column based on "Value"
             bar_data["Color"] = bar_data["Value"].apply(
-                lambda x: "blue" #if x != 1 else "darkblue"
+                lambda x: "darkblue" if x == 1 else "lightgray"
             )
 
-            # Create bar chart
             fig = px.bar(
                 bar_data,
                 x="Beteiligte",
                 y="Value",
                 title="Unfallbeteiligte",
-                #text="Value",  # Display values on bars
             )
 
-            # Update the layout and appearance
             fig.update_traces(
-                marker_color=bar_data["Color"],  # Use custom colors
-                #texttemplate="%{text}",  # Format text on bars
-                textposition="outside",  # Position the text outside the bar
+                marker_color=bar_data["Color"],
+                textposition="none",
             )
             fig.update_layout(
                 yaxis=dict(
                     tickmode="array",
                     tickvals=[0, 1],
-                    ticktext=["Unbeteiligt", "Beteiligt"],  # Custom labels
+                    ticktext=["Unbeteiligt", "Beteiligt"],
                 ),
                 height=300,
             )
 
             return fig
 
-
-    # Default empty figure
-    #return go.Figure()
     return no_update
+
+
 
 def generateMonthAndYearMarks(df):
     start = str(df[CONSTS.JAHR].min()) + "-" + str(df[CONSTS.MONAT].min()) + "-" + "1"
     end = str(df[CONSTS.JAHR].max()) + "-" + str(df[CONSTS.MONAT].max()) + "-" + "1"
     month_year_range = pd.date_range(
         start=start, end=end, freq="QS"
-    )  # QS DateOffset Quarter Starting
+    )
 
     return {
         each: {"label": str(date), "style": {"transform": "rotate(45deg)"}}
@@ -234,79 +207,274 @@ def generateMonthAndYearMarks(df):
     }
 
 
-def main():
-    marksMonthYear = generateMonthAndYearMarks(accidents_data)
 
-    # Set Dash layout for displaying the map and the bar chart
+# Overview-Tab ------------------------------------------------------------------------------------------------------------------------
+@app.callback(
+    Output("overview-graph-container", "children"),  # Dynamischer Platzhalter
+    Input("overview-selection", "value"),
+)
+def update_overview_graph(selected_chart):
+    if selected_chart == "bar-chart-accidents-overview":
+        # Gruppieren der Daten nach Unfallklasse
+        data_by_class = accidents_data.groupby(CONSTS.UNFALLKLASSE_WAHR).size().reset_index(name="Anzahl")
+        
+        # Mapping für die Labels
+        order_map = {"2": "Leichtverletzt", "1": "Schwerverletzt", "0": "Tödlicher Ausgang"}
+        data_by_class[CONSTS.UNFALLKLASSE_WAHR] = data_by_class[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
+        data_by_class[CONSTS.UNFALLKLASSE_WAHR] = pd.Categorical(
+            data_by_class[CONSTS.UNFALLKLASSE_WAHR],
+            categories=["Leichtverletzt", "Schwerverletzt", "Tödlicher Ausgang"],
+            ordered=True,
+        )
+        
+        # Erstellung des Balkendiagramms
+        fig = px.bar(
+            data_by_class,
+            x=CONSTS.UNFALLKLASSE_WAHR,
+            y="Anzahl",
+            title="Anzahl der Unfälle nach Unfallklasse",
+            color=CONSTS.UNFALLKLASSE_WAHR,
+            color_discrete_map={
+                "Leichtverletzt": "green",
+                "Schwerverletzt": "orange",
+                "Tödlicher Ausgang": "red",
+            },
+        )
+        
+        fig.update_layout(
+            xaxis_title="Unfallklasse",
+            yaxis_title="Anzahl der Unfälle",
+            showlegend=False,
+        )
+        return dcc.Graph(figure=fig)
+
+    elif selected_chart == "bar-chart-accidents-years-overview":
+        # Gruppieren der Daten nach Jahr und Unfallklasse
+        data_by_year = accidents_data.groupby([CONSTS.JAHR, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
+        data_by_year = data_by_year.loc[data_by_year[CONSTS.JAHR].between(2016, 2022)]
+        
+        # Mapping für die Reihenfolge und Labels
+        order_map = {"2": "Leichtverletzt", "1": "Schwerverletzt", "0": "Tödlicher Ausgang"}
+        data_by_year[CONSTS.UNFALLKLASSE_WAHR] = data_by_year[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
+        data_by_year[CONSTS.UNFALLKLASSE_WAHR] = pd.Categorical(
+            data_by_year[CONSTS.UNFALLKLASSE_WAHR],
+            categories=["Leichtverletzt", "Schwerverletzt", "Tödlicher Ausgang"],
+            ordered=True,
+        )
+        
+        # Erstellung des Balkendiagramms
+        bar_fig = px.bar(
+            data_by_year,
+            x=CONSTS.JAHR,
+            y="Anzahl",
+            color=CONSTS.UNFALLKLASSE_WAHR,
+            title="Unfälle pro Jahr nach Unfallklasse - Balkendiagramm",
+            color_discrete_map={
+                "Leichtverletzt": "green",
+                "Schwerverletzt": "orange",
+                "Tödlicher Ausgang": "red",
+            },
+            barmode="group",
+        )
+        bar_fig.update_layout(
+            xaxis_title="Jahr",
+            yaxis_title="Anzahl der Unfälle",
+            legend_title="Unfallklasse",
+        )
+        
+        # Erstellung des Liniendiagramms
+        line_fig = px.line(
+            data_by_year,
+            x=CONSTS.JAHR,
+            y="Anzahl",
+            color=CONSTS.UNFALLKLASSE_WAHR,
+            title="Unfälle pro Jahr nach Unfallklasse - Liniendiagramm",
+            color_discrete_map={
+                "Leichtverletzt": "green",
+                "Schwerverletzt": "orange",
+                "Tödlicher Ausgang": "red",
+            },
+        )
+        line_fig.update_layout(
+            xaxis_title="Jahr",
+            yaxis_title="Anzahl der Unfälle",
+            legend_title="Unfallklasse",
+        )
+        
+        return html.Div([
+            dcc.Graph(figure=bar_fig),
+            dcc.Graph(figure=line_fig),
+        ])
+
+    elif selected_chart == "line-chart-accidents-date-overview":
+        # Gruppieren der Daten nach Datum und Unfallklasse
+        data_by_date = accidents_data.groupby([CONSTS.CUSTOM_DATETIME, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
+        
+        # Mapping für die Labels
+        order_map = {"2": "Leichtverletzt", "1": "Schwerverletzt", "0": "Tödlicher Ausgang"}
+        data_by_date[CONSTS.UNFALLKLASSE_WAHR] = data_by_date[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
+        data_by_date[CONSTS.UNFALLKLASSE_WAHR] = pd.Categorical(
+            data_by_date[CONSTS.UNFALLKLASSE_WAHR],
+            categories=["Leichtverletzt", "Schwerverletzt", "Tödlicher Ausgang"],
+            ordered=True,
+        )
+        
+        # Erstellung des Balkendiagramms
+        bar_fig = px.bar(
+            data_by_date,
+            x=CONSTS.CUSTOM_DATETIME,
+            y="Anzahl",
+            color=CONSTS.UNFALLKLASSE_WAHR,
+            title="Unfälle über die Zeit nach Unfallklasse - Balkendiagramm",
+            color_discrete_map={
+                "Leichtverletzt": "green",
+                "Schwerverletzt": "orange",
+                "Tödlicher Ausgang": "red",
+            },
+        )
+        bar_fig.update_layout(
+            xaxis_title="Datum",
+            yaxis_title="Anzahl der Unfälle",
+            legend_title="Unfallklasse",
+            xaxis=dict(tickformat="%Y-%m-%d"),  # Format der Datumsanzeige
+        )
+        
+        # Erstellung des Liniendiagramms
+        line_fig = px.line(
+            data_by_date,
+            x=CONSTS.CUSTOM_DATETIME,
+            y="Anzahl",
+            color=CONSTS.UNFALLKLASSE_WAHR,
+            title="Unfälle über die Zeit nach Unfallklasse - Liniendiagramm",
+            color_discrete_map={
+                "Leichtverletzt": "green",
+                "Schwerverletzt": "orange",
+                "Tödlicher Ausgang": "red",
+            },
+        )
+        line_fig.update_layout(
+            xaxis_title="Datum",
+            yaxis_title="Anzahl der Unfälle",
+            legend_title="Unfallklasse",
+            xaxis=dict(tickformat="%Y-%m-%d"),
+        )
+        
+        return html.Div([
+            dcc.Graph(figure=bar_fig),
+            dcc.Graph(figure=line_fig),
+        ])
+
+    return html.Div("Bitte eine valide Option auswählen.")  # Fallback
+
+
+
+# Tab-----------------------------------------------------------------------------------------------------------------------------------
+@app.callback(
+    Output("tab-content", "children"),
+    Input("tabs", "value"),
+)
+def render_tab_content(tab_value):
+    if tab_value == "ueberblick":
+        return html.Div(
+            [
+                # Auswahl für den Nutzer
+                html.Div(
+                    dcc.RadioItems(
+                        id="overview-selection",
+                        options=[
+                            {"label": "Unfallübersicht", "value": "bar-chart-accidents-overview"},
+                            {"label": "Unfälle nach Jahr", "value": "bar-chart-accidents-years-overview"},
+                            {"label": "Unfälle nach Datum", "value": "line-chart-accidents-date-overview"},
+                        ],
+                        value="bar-chart-accidents-overview",  # Standardwert
+                        labelStyle={"display": "inline-block", "margin-right": "15px"},
+                    ),
+                    style={"margin-bottom": "20px"},
+                ),
+                 html.Div(id="overview-graph-container"),  # Platzhalter für das Diagramm
+            ]
+        )
+    elif tab_value == "erkunden":
+        marksMonthYear = generateMonthAndYearMarks(accidents_data)
+
+        return html.Div(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                html.Div(
+                                    dcc.Dropdown(
+                                        highlighting_dropdown,
+                                        id="highlighting_dropdown",
+                                        searchable=False,
+                                        value=highlighting_dropdown[0],
+                                    )
+                                ),
+                                html.Div(
+                                    dcc.Graph(
+                                        id="map",
+                                        figure=prepare_map(
+                                            CONSTS.UNFALLKLASSE_WAHR, accidents_data
+                                        ),
+                                        config={"scrollZoom": True},
+                                    ),
+                                ),
+                                html.Div(
+                                    dcc.RangeSlider(
+                                        id="year_range_slider",
+                                        min=0,
+                                        max=len(marksMonthYear) - 1,
+                                        step=1,
+                                        marks=marksMonthYear,
+                                        pushable=1,
+                                    )
+                                ),
+                            ],
+                        ),
+                        dbc.Col(
+                            [
+                                dbc.Row(
+                                    dbc.Col(
+                                        html.Div(
+                                            dcc.Graph(
+                                                id="bar-chart-predicted-accident-class"
+                                            )
+                                        ),
+                                    )
+                                ),
+                                dbc.Row(
+                                    dbc.Col(
+                                        html.Div(
+                                            dcc.Graph(
+                                                id="bar-chart-accident-participants"
+                                            ),
+                                        )
+                                    )
+                                ),
+                            ],
+                        ),
+                    ],
+                )
+            ]
+        )
+
+
+def main():
     app.layout = html.Div(
         [
             html.H3("Unfall-Dashboard"),
-            dbc.Row(
-                [
-                    dbc.Col(
-                        [
-                            html.Div(
-                                dcc.Dropdown(
-                                    highlighting_dropdown,
-                                    id="highlighting_dropdown",
-                                    searchable=False,
-                                    value=highlighting_dropdown[0],
-                                )
-                            ),
-                            html.Div(
-                                dcc.Graph(
-                                    id="map",
-                                    figure=prepare_map(
-                                        CONSTS.UNFALLKLASSE_WAHR, accidents_data
-                                    ),
-                                    config={"scrollZoom": True},
-                                ),
-                                style={
-                                    # TODO
-                                },
-                            ),
-                            html.Div(
-                                dcc.RangeSlider(
-                                    id="year_range_slider",
-                                    min=0,
-                                    max=len(marksMonthYear) - 1,
-                                    step=1,
-                                    marks=marksMonthYear,
-                                    pushable=1,
-                                )
-                            ),
-                        ],
-                        style={
-                            # TODO
-                        },
-                    ),
-                    dbc.Col(
-                        [
-                            dbc.Row(
-                                dbc.Col(
-                                    html.Div(
-                                        dcc.Graph(
-                                            id="bar-chart-predicted-accident-class"
-                                        )
-                                    ),
-                                )
-                            ),
-                            dbc.Row(
-                                dbc.Col(
-                                    html.Div(
-                                        dcc.Graph(id="bar-chart-accident-participants"),
-                                    ),
-                                )
-                            ),
-                        ],
-                        style={},  # todo
-                    ),
+            dcc.Tabs(
+                id="tabs",
+                value="erkunden",
+                children=[
+                    dcc.Tab(label="Überblick", value="ueberblick"),
+                    dcc.Tab(label="Erkunden", value="erkunden"),
                 ],
-                style={"align-items": "end"},
             ),
+            html.Div(id="tab-content"),
         ]
     )
-
     app.run_server(debug=True, port=8081)
 
 
