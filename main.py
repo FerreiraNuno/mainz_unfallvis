@@ -20,7 +20,7 @@ def generateDateRangeByMinAndMaxDate(df):
     )  # MS DateOffset Monthly Starting
 
     return {
-        each: {"label": str(date), "style": {'transform': 'rotate(90deg)'}}
+        each: {"label": str(date), "style": {'transform': 'rotate(45deg)'}}
         for each, date in enumerate(month_year_range.unique().strftime("%m.%Y"))
     }
 
@@ -58,23 +58,16 @@ def prepare_map(attr_to_color_by, data):
         lon=CONSTS.LONGITUDE,
         hover_name=CONSTS.STADTTEIL,
         hover_data=[
-            CONSTS.JAHR,
             CONSTS.UNFALLKLASSE_BESTIMMT,
             CONSTS.STRASSENVERHAELTNISSE,
             CONSTS.STRASSENART,
-            CONSTS.UNSICHERHEITS_SCORE,
             CONSTS.LICHTVERHAELTNISSE,
             CONSTS.UNFALLTYP,
         ],
         custom_data=[data.index],  # Pass the DataFrame index as custom data
         zoom=12,
         color=attr_to_color_by,
-        color_discrete_sequence=customColoringMap.get(attr_to_color_by),
-        color_discrete_map={
-            "0": "red",
-            "1": "orange",
-            "2": "green",
-        },
+        color_discrete_map=customColoringMap.get(attr_to_color_by)
     )
     map_fig.update_layout(
         mapbox_style="https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json",
