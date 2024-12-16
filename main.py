@@ -195,6 +195,7 @@ def prepare_marks():
 
 
 # Overview-Tab ------------------------------------------------------------------------------------------------------------------------
+# Overview Accidents
 @app.callback(
     Output("overview-graph-container", "children"),  # Dynamischer Platzhalter
     Input("overview-selection", "value"),
@@ -322,7 +323,7 @@ def update_overview_graph(selected_chart):
             xaxis_title="Datum",
             yaxis_title="Anzahl der Unfälle",
             legend_title="Unfallklasse",
-            xaxis=dict(tickformat="%Y-%m-%d"),  # Format der Datumsanzeige
+            xaxis=dict(tickformat="%Y-%m"),  # Format der Datumsanzeige
         )
         
         # Erstellung des Liniendiagramms
@@ -352,6 +353,225 @@ def update_overview_graph(selected_chart):
 
     return html.Div("Bitte eine valide Option auswählen.")  # Fallback
 
+# Second Overview ----------------------------------------------------------------------------------------------------------------------
+@app.callback(
+    Output("overview-extended-graph-container", "children"),
+    Input("overview-selection-extended", "value"),
+)
+def update_extended_overview_graph(selected_chart):
+    if selected_chart == "temporal-accidents-distribution":
+        # Heatmap: Stunden vs. Monate
+        heatmap_data = accidents_data.groupby([CONSTS.MONAT, CONSTS.STUNDE]).size().unstack(fill_value=0)
+        heatmap_fig = px.imshow(
+            heatmap_data,
+            labels=dict(x="Stunde", y="Monat", color="Anzahl"),
+            x=heatmap_data.columns,
+            y=heatmap_data.index,
+            title="Unfallhäufigkeit: Stunden vs. Monate",
+        )
+        
+        # Liniendiagramm: Gesamte Unfallzahlen pro Monat und Stunde
+        line_data = accidents_data.groupby([CONSTS.MONAT, CONSTS.STUNDE, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
+        order_map = {"2": "Leichtverletzt", "1": "Schwerverletzt", "0": "Tödlicher Ausgang"}
+        color_map = {"Leichtverletzt": "green", "Schwerverletzt": "orange", "Tödlicher Ausgang": "red"}
+        line_data[CONSTS.UNFALLKLASSE_WAHR] = line_data[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
+        line_fig = px.line(
+            line_data,
+            x=CONSTS.STUNDE,
+            y="Anzahl",
+            color=CONSTS.UNFALLKLASSE_WAHR,
+            facet_row=CONSTS.MONAT,
+            title="Unfallzahlen nach Stunde und Monat",
+            color_discrete_map=color_map,
+        )
+        
+        return html.Div([dcc.Graph(figure=heatmap_fig), dcc.Graph(figure=line_fig)])
+    
+    elif selected_chart == "accident-types-frequency":
+        # Zuerst definierst du das "order_map" und wandelst die Werte in den richtigen Text um
+        order_map_unfallart = {
+            "0": "Unfall anderer Art", 
+            "1": "Zusammenstoß mit anfahrendem/anhaltendem/ruhendem Fahrzeug", 
+            "2": "Zusammenstoß mit vorausfahrendem/wartendem Fahrzeug", 
+            "3": "Zusammenstoß mit seitlich in gleicher Richtung fahrendem Fahrzeug", 
+            "4": "Zusammenstoß mit entgegenkommendem Fahrzeug", 
+            "5": "Zusammenstoß mit einbiegendem/kreuzendem Fahrzeug", 
+            "6": "Zusammenstoß zwischen Fahrzeug und Fußgänger", 
+            "7": "Aufprall auf Fahrbahnhindernis", 
+            "8": "Abkommen von Fahrbahn nach rechts", 
+            "9": "Abkommen von Fahrbahn nach links"
+        }
+
+        order_map_unfalltyp = {
+            "0": "Fahrunfall", 
+            "1": "Abbiegeunfall", 
+            "2": "Einbiegen / Kreuzen-Unfall", 
+            "3": "Überschreiten-Unfall", 
+            "4": "Unfall durch ruhenden Verkehr", 
+            "5": "Unfall im Längsverkehr", 
+            "6": "sonstiger Unfall"
+        }
+
+        # Groupiere die Unfalldaten nach Unfallart und -typ
+        accident_types_data = accidents_data.groupby([CONSTS.UNFALLART, CONSTS.UNFALLTYP]).size().reset_index(name="Anzahl")
+
+        # Mappe die Unfallerarten und Unfalltypen auf ihre Beschreibungen
+        accident_types_data[CONSTS.UNFALLART] = accident_types_data[CONSTS.UNFALLART].map(order_map_unfallart)
+        accident_types_data[CONSTS.UNFALLTYP] = accident_types_data[CONSTS.UNFALLTYP].map(order_map_unfalltyp)
+
+        # Diagramm 1: Häufigkeit der Unfallarten (nur Unfallart, ohne Unfalltyp)
+        fig_unfallart = px.bar(
+            accident_types_data.groupby(CONSTS.UNFALLART)['Anzahl'].sum().reset_index(),  # Gruppierung nur nach Unfallart
+            x=CONSTS.UNFALLART,
+            y="Anzahl",
+            title="Häufigkeit der Unfallarten",
+            color=CONSTS.UNFALLART,  # Jede Unfallart wird in einer anderen Farbe dargestellt
+            labels={CONSTS.UNFALLART: "Unfallart"},  # Achsenbezeichnung anpassen
+        )
+        fig_unfallart.update_layout(height=600) 
+        # Entferne die Legende im Diagramm 1
+        fig_unfallart.update_layout(showlegend=False)
+
+        # Diagramm 2: Häufigkeit der Unfalltypen (nur Unfalltyp, ohne Unfallart)
+        fig_unfalltyp = px.bar(
+            accident_types_data.groupby(CONSTS.UNFALLTYP)['Anzahl'].sum().reset_index(),  # Gruppierung nur nach Unfalltyp
+            x=CONSTS.UNFALLTYP,
+            y="Anzahl",
+            title="Häufigkeit der Unfalltypen",
+            color=CONSTS.UNFALLTYP,  # Jeder Unfalltyp wird in einer anderen Farbe dargestellt
+            labels={CONSTS.UNFALLTYP: "Unfalltyp"},  # Achsenbezeichnung anpassen
+        )
+        fig_unfalltyp.update_layout(height=400) 
+        # Entferne die Legende im Diagramm 2
+        fig_unfalltyp.update_layout(showlegend=False)
+
+        # Diagramm 3: Kombiniertes Diagramm für Unfallarten und -typen (bereits wie gehabt)
+        fig_combined = px.bar(
+            accident_types_data,
+            x=CONSTS.UNFALLART,
+            y="Anzahl",
+            color=CONSTS.UNFALLTYP,
+            title="Häufigkeit von Unfallarten und -typen",
+            barmode="group",  # Gruppiert die Balken für unterschiedliche Unfalltypen nebeneinander
+            labels={CONSTS.UNFALLART: "Unfallart", CONSTS.UNFALLTYP: "Unfalltyp"},  # Achsenbezeichnungen
+        )
+        fig_combined.update_layout(height=800) 
+
+        # Rückgabe der Diagramme als mehrere Graphen
+        return html.Div([
+            dcc.Graph(figure=fig_unfallart),
+            dcc.Graph(figure=fig_unfalltyp),
+            dcc.Graph(figure=fig_combined)
+        ])
+
+
+    
+    elif selected_chart == "environmental-conditions-impact":
+        # Mapping der Lichtverhältnisse
+        licht_map = {
+            "2": "Dunkelheit", 
+            "1": "Dämmerung", 
+            "0": "Tageslicht"
+        }
+
+        # Mapping der Straßenverhältnisse (hier als Beispiel)
+        strassen_map = {
+            "0": "Trocken",
+            "1": "nass/feucht/schlüpfrig",
+            "2": "winterglatt"
+        }
+
+        # Mapping der Unfallklassen (hier als Beispiel)
+        unfallklasse_map = {
+            "1": "Leichtverletzte",
+            "2": "Schwerverletzte",
+            "0": "Tödlicher Ausgang"
+        }
+
+        # Gruppiere die Daten nach den relevanten Spalten
+        env_conditions_data = accidents_data.groupby([CONSTS.LICHTVERHAELTNISSE, CONSTS.STRASSENVERHAELTNISSE, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
+
+        # Wende die Mappings auf die entsprechenden Spalten an
+        env_conditions_data[CONSTS.LICHTVERHAELTNISSE] = env_conditions_data[CONSTS.LICHTVERHAELTNISSE].map(licht_map)
+        env_conditions_data[CONSTS.STRASSENVERHAELTNISSE] = env_conditions_data[CONSTS.STRASSENVERHAELTNISSE].map(strassen_map)
+        env_conditions_data[CONSTS.UNFALLKLASSE_WAHR] = env_conditions_data[CONSTS.UNFALLKLASSE_WAHR].map(unfallklasse_map)
+
+        # Erstelle das gestapelte Balkendiagramm
+        fig = px.bar(
+            env_conditions_data,
+            x=CONSTS.LICHTVERHAELTNISSE,
+            y="Anzahl",
+            color=CONSTS.STRASSENVERHAELTNISSE,
+            title="Einfluss der Lichtverhältnisse auf Unfälle",
+            barmode="stack",
+            facet_col=CONSTS.UNFALLKLASSE_WAHR,
+            labels={  # Hier kannst du die Achsenbeschriftungen ändern
+                CONSTS.LICHTVERHAELTNISSE: "Lichtverhältnis",
+                CONSTS.STRASSENVERHAELTNISSE: "Straßenverhältnis",
+                CONSTS.UNFALLKLASSE_WAHR: "Unfallklasse"
+            }
+        )
+
+        # Rückgabe des Diagramms
+        return dcc.Graph(figure=fig)
+
+    
+    elif selected_chart == "vehicle-participation":
+        # Mapping der Unfallklassen
+        unfallklasse_map = {
+            "1": "Leichtverletzte",
+            "2": "Schwerverletzte",
+            "0": "Tödlicher Ausgang"
+        }
+
+        # Wandle die Fahrzeugdaten um, um die verschiedenen Fahrzeugarten als Variablen zu haben
+        vehicle_data = accidents_data.melt(
+            id_vars=[CONSTS.UNFALLKLASSE_WAHR],
+            value_vars=[CONSTS.ISTPKW, CONSTS.ISTKRAD, CONSTS.ISTRAD, CONSTS.ISTFUSS, CONSTS.ISTSONSTIG],
+            var_name="Fahrzeugart",
+            value_name="Beteiligung",
+        )
+
+        # Filtere die Daten, um nur die beteiligten Fahrzeuge zu behalten (Beteiligung == 1)
+        vehicle_data = vehicle_data[vehicle_data["Beteiligung"] == 1]
+
+        # Wende das Mapping für die Unfallklassen an
+        vehicle_data[CONSTS.UNFALLKLASSE_WAHR] = vehicle_data[CONSTS.UNFALLKLASSE_WAHR].map(unfallklasse_map)
+
+        # Entferne das "ist" aus den Fahrzeugart-Spaltennamen
+        vehicle_data["Fahrzeugart"] = vehicle_data["Fahrzeugart"].replace({
+            CONSTS.ISTPKW: "PKW",
+            CONSTS.ISTKRAD: "K-Rad",
+            CONSTS.ISTRAD: "Fahrrad",
+            CONSTS.ISTFUSS: "Fußgänger",
+            CONSTS.ISTSONSTIG: "Sonstige"
+        })
+
+        # Erstelle das gestapelte Balkendiagramm
+        fig = px.bar(
+            vehicle_data.groupby(["Fahrzeugart", CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl"),
+            x="Fahrzeugart",
+            y="Anzahl",
+            color=CONSTS.UNFALLKLASSE_WAHR,
+            title="Unfallbeteiligte Fahrzeugarten",
+            barmode="stack",
+            color_discrete_map={  # Farben für die Unfallklassen anpassen
+                "Tödlicher Ausgang": "red",  # 0 wird rot
+                "Leichtverletzte": "green",  # 1 wird grün
+                "Schwerverletzte": "orange"  # 2 wird orange
+            },
+            labels={  # Achsenbezeichner anpassen
+                "Fahrzeugart": "Fahrzeugart",
+                CONSTS.UNFALLKLASSE_WAHR: "Unfallklasse",
+                "Anzahl": "Anzahl der Beteiligungen"  # Optional: Auch Y-Achse für "Anzahl" anpassen
+            }
+        )
+
+        # Rückgabe des Diagramms
+        return dcc.Graph(figure=fig)    
+    return html.Div("Bitte eine valide Option auswählen.")
+
+
 
 
 # Tab-----------------------------------------------------------------------------------------------------------------------------------
@@ -364,20 +584,38 @@ def render_tab_content(tab_value):
         return html.Div(
             [
                 # Auswahl für den Nutzer
+                html.H5("Überblick über die Anzahl an Unfälle:"),
                 html.Div(
                     dcc.RadioItems(
                         id="overview-selection",
                         options=[
-                            {"label": "Unfallübersicht", "value": "bar-chart-accidents-overview"},
+                            {"label": "Unfälle gesamt", "value": "bar-chart-accidents-overview"},
                             {"label": "Unfälle nach Jahr", "value": "bar-chart-accidents-years-overview"},
-                            {"label": "Unfälle nach Datum", "value": "line-chart-accidents-date-overview"},
+                            {"label": "Unfälle nach Monat", "value": "line-chart-accidents-date-overview"},
                         ],
                         value="bar-chart-accidents-overview",  # Standardwert
                         labelStyle={"display": "inline-block", "margin-right": "15px"},
                     ),
                     style={"margin-bottom": "20px"},
                 ),
-                 html.Div(id="overview-graph-container"),  # Platzhalter für das Diagramm
+                html.Div(id="overview-graph-container"),  # Platzhalter für das Diagramm
+                # Second RadioItem
+                html.H5("Überblick über die Unfallverhältnisse:"),
+                html.Div(
+                    dcc.RadioItems(
+                        id="overview-selection-extended",
+                        options=[
+                            {"label": "Zeitliche Verteilung der Unfälle", "value": "temporal-accidents-distribution"},
+                            {"label": "Häufigkeit von Unfallarten und -typen", "value": "accident-types-frequency"},
+                            {"label": "Einfluss der Umweltbedingungen", "value": "environmental-conditions-impact"},
+                            {"label": "Unfallbeteiligte Fahrzeugarten", "value": "vehicle-participation"},
+                        ],
+                        value="temporal-accidents-distribution",  # Standardwert
+                        labelStyle={"display": "inline-block", "margin-right": "15px"},
+                    ),
+                    style={"margin-bottom": "20px"},
+                ),
+                html.Div(id="overview-extended-graph-container"),  # Platzhalter für die neuen Diagramme
             ]
         )
     elif tab_value == "erkunden":
@@ -474,11 +712,11 @@ def main():
             html.H3("Unfall-Dashboard"),
             dcc.Tabs(
                 id="tabs",
-                value="erkunden",
-                children=[
-                    dcc.Tab(label="Überblick", value="ueberblick"),
-                    dcc.Tab(label="Erkunden", value="erkunden"),
-                ],
+                value="ueberblick",
+                children = [
+                    dcc.Tab(label="Überblick", value="ueberblick", style={"font-weight": "bold"}),
+                    dcc.Tab(label="Erkunden", value="erkunden", style={"font-weight": "bold"}),
+                ]
             ),
             html.Div(id="tab-content"),
         ]
