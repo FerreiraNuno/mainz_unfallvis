@@ -1,0 +1,140 @@
+/* Allgemeine Stile */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa; /* Helles Grau für den Hintergrund */
+    margin: 0;
+    padding: 0;
+    color: #212529; /* Dunkles Grau für den Text */
+}
+
+/* Titelbereich */
+h3 {
+    font-size: 1.8rem;
+    margin: 10px;
+    font-weight: bold;
+    color: #343a40; /* Dunklerer Text */
+}
+
+/* Buttons */
+button {
+    cursor: pointer;
+    border-radius: 5px;
+    border: none;
+    padding: 10px 15px;
+    font-size: 1rem;
+}
+
+button:focus {
+    outline: none;
+}
+
+button.secondary {
+    background-color: #e9ecef; /* Helles Grau */
+    color: #212529; /* Dunkles Grau */
+    border: 1px solid #ced4da; /* Hellgrauer Rand */
+}
+
+button.secondary:hover {
+    background-color: #ced4da; /* Etwas dunkleres Grau beim Hover */
+}
+
+/* Modaler Hintergrund */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Halbtransparenter schwarzer Hintergrund */
+    z-index: 1040;
+}
+
+/* Modal */
+.modal-content {
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    max-width: 600px;
+    margin: 20px auto;
+    z-index: 1050;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 10px;
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #495057;
+}
+
+.modal-body {
+    font-size: 1rem;
+    color: #212529;
+    line-height: 1.5;
+}
+
+/* Leiste (z.B. für Unfall-Dashboard-Header) */
+.header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #343a40; /* Dunkelgrau */
+    color: white;
+    padding: 10px 15px;
+}
+
+.header-bar h3 {
+    margin: 0;
+    color: white;
+}
+
+.header-bar-h3 {
+    background-color: #f0f0f0; /* Helles Grau für die gesamte Zeile */
+    padding: 10px 15px; /* Abstand innen */
+    margin: 0; /* Kein äußerer Abstand */
+    font-size: 1.25rem; /* Ähnlich wie h3 */
+    font-weight: bold; /* Fettgedruckt wie h3 */
+    text-align: left; /* Linksbündig */
+    border-bottom: 1px solid #dcdcdc; /* Optional: Dünne untere Linie */
+    color: #333333; /* Dunkler Text */
+}
+
+/* Tabs */
+.tabs {
+    border-bottom: 2px solid #e9ecef;
+    display: flex;
+}
+
+.tabs .tab {
+    padding: 10px 15px;
+    cursor: pointer;
+    color: #495057;
+    font-weight: bold;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+}
+
+.tabs .tab:hover {
+    background-color: #e9ecef;
+}
+
+.tabs .tab.active {
+    border-bottom: 3px solid #007bff; /* Blau für aktive Tabs */
+    color: #007bff;
+}
+
+/* Graph-Container */
+.graph-container {
+    margin: 20px;
+    padding: 15px;
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

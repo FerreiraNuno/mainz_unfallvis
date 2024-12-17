@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output, no_update
+from dash import Dash, dcc, html, Input, Output, no_update, State
 import plotly.express as px
 import pandas as pd
 import consts as CONSTS
@@ -7,9 +7,16 @@ from datetime import datetime
 import dash_bootstrap_components as dbc
 
 # Create Dash app
-app = Dash(__name__, external_stylesheets = [dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+app = Dash(
+    __name__,
+    external_stylesheets=[
+        dbc.themes.BOOTSTRAP,
+        "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.9.1/font/bootstrap-icons.min.css"
+    ],
+    suppress_callback_exceptions=True
+)
 
-# Load data
+# Load data -----------------------------------------------------------------------------------------------------------------------------
 accidents_data = pd.read_csv("./data/Verkehrsunfalldaten.csv", delimiter=";", decimal=",")
 
 def generateDateRangeByMinAndMaxDate(df):
@@ -82,6 +89,20 @@ def prepare_map(attr_to_color_by, data):
         )
     )
     return map_fig
+
+
+
+# Callback for the Info-Button
+@app.callback(
+    Output("info-modal", "is_open"),
+    Input("info-button", "n_clicks"),
+    prevent_initial_call=True
+)
+def toggle_modal(info_btn_clicks):
+    if info_btn_clicks:
+        return True
+    return False
+
 
 
 @app.callback(
@@ -192,6 +213,7 @@ def prepare_marks():
     last_key = list(date_range_monthly.keys())[-1]
     marks_dict[last_key] = date_range_monthly.get(last_key)
     return marks_dict
+
 
 
 # Overview-Tab ------------------------------------------------------------------------------------------------------------------------
@@ -584,7 +606,7 @@ def render_tab_content(tab_value):
         return html.Div(
             [
                 # Auswahl für den Nutzer
-                html.H5("Überblick über die Anzahl an Unfälle:"),
+                html.H5("Überblick über die Anzahl an Unfälle:", className="header-bar-h3"),
                 html.Div(
                     dcc.RadioItems(
                         id="overview-selection",
@@ -600,7 +622,7 @@ def render_tab_content(tab_value):
                 ),
                 html.Div(id="overview-graph-container"),  # Platzhalter für das Diagramm
                 # Second RadioItem
-                html.H5("Überblick über die Unfallverhältnisse:"),
+                html.H5("Überblick über die Unfallverhältnisse:", className="header-bar-h3"),
                 html.Div(
                     dcc.RadioItems(
                         id="overview-selection-extended",
@@ -707,13 +729,43 @@ def render_tab_content(tab_value):
 
 
 def main():
+    # Info-Button und Modal
+    info_button_and_modal = html.Div([
+        # Info-Button
+        dbc.Button(
+            html.I(className="bi bi-info-circle"),  # Bootstrap Info-Icon
+            id="info-button",
+            color="secondary",
+            outline=True,
+            className="float-end",
+            style={"margin-right": "10px"}
+        ),
+        # Modal
+        dbc.Modal(
+            [
+                dbc.ModalHeader(dbc.ModalTitle("Informationen über den Datensatz"), close_button=True),
+                dbc.ModalBody("Hier steht ein Platzhaltertext über den Datensatz."),  # Placeholder-Text
+            ],
+            id="info-modal",
+            is_open=False,
+            centered=True,
+        )
+    ])
+
+    # Layout der App
     app.layout = html.Div(
         [
-            html.H3("Unfall-Dashboard"),
+            html.Div(
+                [
+                    html.H3("Unfall-Dashboard", style={"display": "inline-block"}),
+                    info_button_and_modal,  # Info-Button und Modal hinzufügen
+                ],
+                className="header-bar"  # Optional: Styling für die Leiste
+            ),
             dcc.Tabs(
                 id="tabs",
                 value="ueberblick",
-                children = [
+                children=[
                     dcc.Tab(label="Überblick", value="ueberblick", style={"font-weight": "bold"}),
                     dcc.Tab(label="Erkunden", value="erkunden", style={"font-weight": "bold"}),
                 ]
@@ -721,7 +773,11 @@ def main():
             html.Div(id="tab-content"),
         ]
     )
+
+    # Server starten
     app.run_server(debug=True, port=8081)
+
+
 
 
 if __name__ == "__main__":
