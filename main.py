@@ -292,8 +292,16 @@ def update_overview_graph(selected_chart):
         )
         
         # Erstellung des Liniendiagramms
+        # Gruppiere die Daten nach Jahr und Unfallklasse, dann reindexiere und fülle fehlende Werte mit 0 -> wird benötigt um bei Liniendiagramme 0-Werte zu ergänzen
+        data_by_year_filled = (
+            data_by_year
+            .set_index([CONSTS.JAHR, CONSTS.UNFALLKLASSE_WAHR])  # Setze Index für MultiIndex-Gruppierung
+            .unstack(fill_value=0)  # Fehlende Kombinationen mit 0 auffüllen
+            .stack()  # MultiIndex zurück in eine flache Struktur konvertieren
+            .reset_index()
+        )
         line_fig = px.line(
-            data_by_year,
+            data_by_year_filled,
             x=CONSTS.JAHR,
             y="Anzahl",
             color=CONSTS.UNFALLKLASSE_WAHR,
@@ -349,8 +357,17 @@ def update_overview_graph(selected_chart):
         )
         
         # Erstellung des Liniendiagramms
-        line_fig = px.line(
-            data_by_date,
+        # Für das Datum: Füge einen vollständigen Datumsbereich hinzu -> Notwendig um Null im Liniendiagramm anzuzeigen
+        # Gruppiere die Daten nach Datum und Unfallklasse, dann reindexiere und fülle fehlende Werte mit 0
+        data_by_date_filled = (
+            data_by_date
+            .set_index([CONSTS.CUSTOM_DATETIME, CONSTS.UNFALLKLASSE_WAHR])  # Setze Index für MultiIndex-Gruppierung
+            .unstack(fill_value=0)  # Fehlende Kombinationen mit 0 auffüllen
+            .stack()  # MultiIndex zurück in eine flache Struktur konvertieren
+            .reset_index()
+        )
+        line_fig_date = px.line(
+            data_by_date_filled,
             x=CONSTS.CUSTOM_DATETIME,
             y="Anzahl",
             color=CONSTS.UNFALLKLASSE_WAHR,
@@ -361,7 +378,7 @@ def update_overview_graph(selected_chart):
                 "Tödlicher Ausgang": "red",
             },
         )
-        line_fig.update_layout(
+        line_fig_date.update_layout(
             xaxis_title="Datum",
             yaxis_title="Anzahl der Unfälle",
             legend_title="Unfallklasse",
@@ -370,7 +387,7 @@ def update_overview_graph(selected_chart):
         
         return html.Div([
             dcc.Graph(figure=bar_fig),
-            dcc.Graph(figure=line_fig),
+            dcc.Graph(figure=line_fig_date),
         ])
 
     return html.Div("Bitte eine valide Option auswählen.")  # Fallback
@@ -394,11 +411,23 @@ def update_extended_overview_graph(selected_chart):
             title="Unfallhäufigkeit: Stunden vs. Monate",
         )
         
+        # Mapping für Unfallklassen
         order_map = {"2": "Leichtverletzt", "1": "Schwerverletzt", "0": "Tödlicher Ausgang"}
         color_map = {"Leichtverletzt": "green", "Schwerverletzt": "orange", "Tödlicher Ausgang": "red"}
-        # Daten für monatliche Unfallzahlen aggregieren
+
+        # 1. Monatsdaten auffüllen
+        all_months = pd.DataFrame({"Monat": range(1, 13)})  # Monate von 1 bis 12
+        all_classes = pd.DataFrame(order_map.values(), columns=[CONSTS.UNFALLKLASSE_WAHR])
+
+        # Erstelle ein vollständiges Raster mit allen Kombinationen von Monat und Unfallklasse
+        full_monthly_data = all_months.merge(all_classes, how="cross")
+
+        # Aggregiere die Unfallzahlen nach Monat und Unfallklasse
         monthly_data = accidents_data.groupby([CONSTS.MONAT, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
         monthly_data[CONSTS.UNFALLKLASSE_WAHR] = monthly_data[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
+
+        # Mische die aggregierten Daten mit dem vollständigen Raster und fülle fehlende Werte mit 0
+        monthly_data = full_monthly_data.merge(monthly_data, on=[CONSTS.MONAT, CONSTS.UNFALLKLASSE_WAHR], how="left").fillna(0)
 
         # Liniendiagramm für Monate
         monthly_line_fig = px.line(
@@ -418,9 +447,16 @@ def update_extended_overview_graph(selected_chart):
             legend_title="Unfallklasse"
         )
 
-        # Daten für stündliche Unfallzahlen aggregieren
+        # 2. Stundendaten auffüllen
+        all_hours = pd.DataFrame({"Stunde": range(0, 24)})  # Stunden von 0 bis 23
+        full_hourly_data = all_hours.merge(all_classes, how="cross")
+
+        # Aggregiere die Unfallzahlen nach Stunde und Unfallklasse
         hourly_data = accidents_data.groupby([CONSTS.STUNDE, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
         hourly_data[CONSTS.UNFALLKLASSE_WAHR] = hourly_data[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
+
+        # Mische die aggregierten Daten mit dem vollständigen Raster und fülle fehlende Werte mit 0
+        hourly_data = full_hourly_data.merge(hourly_data, on=[CONSTS.STUNDE, CONSTS.UNFALLKLASSE_WAHR], how="left").fillna(0)
 
         # Liniendiagramm für Stunden
         hourly_line_fig = px.line(
@@ -439,6 +475,7 @@ def update_extended_overview_graph(selected_chart):
             yaxis_title="Anzahl der Unfälle",
             legend_title="Unfallklasse"
         )
+
 
         # Rückgabe der beiden Diagramme
         return html.Div([
