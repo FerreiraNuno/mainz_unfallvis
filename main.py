@@ -442,9 +442,9 @@ def update_extended_overview_graph(selected_chart):
 
         # Rückgabe der beiden Diagramme
         return html.Div([
-            dcc.Graph(figure=heatmap_fig),
             dcc.Graph(figure=monthly_line_fig),
-            dcc.Graph(figure=hourly_line_fig)
+            dcc.Graph(figure=hourly_line_fig),
+            dcc.Graph(figure=heatmap_fig)
         ])
 
     elif selected_chart == 'accident-region':
@@ -472,32 +472,45 @@ def update_extended_overview_graph(selected_chart):
         )
 
 
-        # Daten für Unfälle pro Stadtteil aggregieren
-        district_data = accidents_data.groupby("Stadtteil").size().reset_index(name="Anzahl")
-        district_data = district_data.sort_values("Anzahl", ascending=False)  # Optional: Stadtteile nach Anzahl sortieren
-
-        # Balkendiagramm für Stadtteile
-        district_bar_fig = px.bar(
-            district_data,
-            x="Stadtteil",
-            y="Anzahl",
-            title="Anzahl der Unfälle pro Stadtteil",
-            color="Anzahl",
-            color_continuous_scale="Viridis",  # Farbskala
+        # Mapping der Unfallschwere
+        order_map = {"2": "Leichtverletzt", "1": "Schwerverletzt", "0": "Tödlicher Ausgang"}
+        color_map = {"Leichtverletzt": "green", "Schwerverletzt": "orange", "Tödlicher Ausgang": "red"}
+        
+        # Vorbereitung der Daten
+        severity_data = (
+            accidents_data.groupby([CONSTS.STADTTEIL, CONSTS.UNFALLKLASSE_WAHR])
+            .size()
+            .reset_index(name="Anzahl")
         )
-
-        # Layout-Anpassungen für das Diagramm
-        district_bar_fig.update_layout(
+        severity_data[CONSTS.UNFALLKLASSE_WAHR] = severity_data[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
+        
+        # Gesamtsumme der Unfälle pro Stadtteil berechnen und sortieren
+        total_accidents_per_district = severity_data.groupby(CONSTS.STADTTEIL)["Anzahl"].sum().sort_values(ascending=False)
+        sorted_districts = total_accidents_per_district.index.tolist()
+        
+        # Erstellung des Diagramms
+        severity_fig = px.bar(
+            severity_data,
+            x=CONSTS.STADTTEIL,
+            y="Anzahl",
+            color=CONSTS.UNFALLKLASSE_WAHR,
+            title="Anzahl der Unfälle nach Unfallschwere in den Stadtteilen",
+            color_discrete_map=color_map,
+            category_orders={"Stadtteil": sorted_districts},  # Stadtteile sortieren
+        )
+        
+        # Layout-Anpassungen
+        severity_fig.update_layout(
             xaxis_title="Stadtteil",
             yaxis_title="Anzahl der Unfälle",
-            coloraxis_colorbar=dict(title="Unfälle"),  # Titel für die Farblegende
-            xaxis_tickangle=45  # Optional: Dreht die Beschriftungen der Stadtteile
+            barmode="stack",  # Gestapelte Balken
+            legend_title="Unfallschwere",
         )
 
         # Rückgabe der Diagramme
         return html.Div([
-            dcc.Graph(figure=heatmap_fig),
-            dcc.Graph(figure=district_bar_fig)
+            dcc.Graph(figure=severity_fig),
+            dcc.Graph(figure=heatmap_fig)                       
         ])
 
     elif selected_chart == "accident-types-frequency":
@@ -525,38 +538,52 @@ def update_extended_overview_graph(selected_chart):
             "6": "sonstiger Unfall"
         }
 
-        # Groupiere die Unfalldaten nach Unfallart und -typ
+        # Mapping der Unfallklassen
+        order_map_unfallklasse = {"2": "Leichtverletzt", "1": "Schwerverletzt", "0": "Tödlicher Ausgang"}
+        color_map_unfallklasse = {"Leichtverletzt": "green", "Schwerverletzt": "orange", "Tödlicher Ausgang": "red"}
+
+        # Groupiere die Unfalldaten nach Unfallart, -typ und Unfallklasse
+        accident_types_data1 = accidents_data.groupby([CONSTS.UNFALLART, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
+        accident_types_data2 = accidents_data.groupby([CONSTS.UNFALLTYP, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
         accident_types_data = accidents_data.groupby([CONSTS.UNFALLART, CONSTS.UNFALLTYP]).size().reset_index(name="Anzahl")
 
-        # Mappe die Unfallerarten und Unfalltypen auf ihre Beschreibungen
+        # Mappe die Unfallerarten, Unfalltypen und Unfallklassen auf ihre Beschreibungen
         accident_types_data[CONSTS.UNFALLART] = accident_types_data[CONSTS.UNFALLART].map(order_map_unfallart)
+        accident_types_data1[CONSTS.UNFALLART] = accident_types_data1[CONSTS.UNFALLART].map(order_map_unfallart)
         accident_types_data[CONSTS.UNFALLTYP] = accident_types_data[CONSTS.UNFALLTYP].map(order_map_unfalltyp)
+        accident_types_data2[CONSTS.UNFALLTYP] = accident_types_data2[CONSTS.UNFALLTYP].map(order_map_unfalltyp)
+        accident_types_data1[CONSTS.UNFALLKLASSE_WAHR] = accident_types_data1[CONSTS.UNFALLKLASSE_WAHR].map(order_map_unfallklasse)
+        accident_types_data2[CONSTS.UNFALLKLASSE_WAHR] = accident_types_data2[CONSTS.UNFALLKLASSE_WAHR].map(order_map_unfallklasse)
 
-        # Diagramm 1: Häufigkeit der Unfallarten (nur Unfallart, ohne Unfalltyp)
+        # Diagramm 1: Häufigkeit der Unfallarten gestapelt nach Unfallklassen
         fig_unfallart = px.bar(
-            accident_types_data.groupby(CONSTS.UNFALLART)['Anzahl'].sum().reset_index(),  # Gruppierung nur nach Unfallart
+            accident_types_data1,
             x=CONSTS.UNFALLART,
             y="Anzahl",
-            title="Häufigkeit der Unfallarten",
-            color=CONSTS.UNFALLART,  # Jede Unfallart wird in einer anderen Farbe dargestellt
-            labels={CONSTS.UNFALLART: "Unfallart"},  # Achsenbezeichnung anpassen
+            color=CONSTS.UNFALLKLASSE_WAHR,  # Gestapelte Balken nach Unfallklasse
+            title="Häufigkeit der Unfallarten nach Unfallschwere",
+            color_discrete_map=color_map_unfallklasse,  # Farbmapping für die Unfallklassen
+            labels={CONSTS.UNFALLART: "Unfallart", CONSTS.UNFALLKLASSE_WAHR: "Unfallschwere"},  # Achsenbezeichnung anpassen
+            barmode="stack"  # Balken gestapelt
         )
-        fig_unfallart.update_layout(height=600) 
-        # Entferne die Legende im Diagramm 1
-        fig_unfallart.update_layout(showlegend=False)
+        fig_unfallart.update_layout(height=600)
+        fig_unfallart.update_layout(showlegend=True)  # Legende anzeigen
 
-        # Diagramm 2: Häufigkeit der Unfalltypen (nur Unfalltyp, ohne Unfallart)
+
+        # Diagramm 2: Häufigkeit der Unfalltypen gestapelt nach Unfallklassen
         fig_unfalltyp = px.bar(
-            accident_types_data.groupby(CONSTS.UNFALLTYP)['Anzahl'].sum().reset_index(),  # Gruppierung nur nach Unfalltyp
+            accident_types_data2,
             x=CONSTS.UNFALLTYP,
             y="Anzahl",
-            title="Häufigkeit der Unfalltypen",
-            color=CONSTS.UNFALLTYP,  # Jeder Unfalltyp wird in einer anderen Farbe dargestellt
-            labels={CONSTS.UNFALLTYP: "Unfalltyp"},  # Achsenbezeichnung anpassen
+            color=CONSTS.UNFALLKLASSE_WAHR,  # Gestapelte Balken nach Unfallklasse
+            title="Häufigkeit der Unfalltypen nach Unfallschwere",
+            color_discrete_map=color_map_unfallklasse,  # Farbmapping für die Unfallklassen
+            labels={CONSTS.UNFALLTYP: "Unfalltyp", CONSTS.UNFALLKLASSE_WAHR: "Unfallschwere"},  # Achsenbezeichnung anpassen
+            barmode="stack"  # Balken gestapelt
         )
-        fig_unfalltyp.update_layout(height=400) 
-        # Entferne die Legende im Diagramm 2
-        fig_unfalltyp.update_layout(showlegend=False)
+        fig_unfalltyp.update_layout(height=400)
+        fig_unfalltyp.update_layout(showlegend=True)  # Legende anzeigen
+
 
         # Diagramm 3: Kombiniertes Diagramm für Unfallarten und -typen (bereits wie gehabt)
         fig_combined = px.bar(
