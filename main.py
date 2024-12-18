@@ -485,30 +485,6 @@ def update_extended_overview_graph(selected_chart):
         ])
 
     elif selected_chart == 'accident-region':
-        # Daten für die Heatmap vorbereiten: Gruppierung nach Stadtteil und Monat
-        heatmap_data = accidents_data.groupby(["Stadtteil", CONSTS.MONAT]).size().reset_index(name="Anzahl")
-
-        # Heatmap erstellen
-        heatmap_fig = px.density_heatmap(
-            heatmap_data,
-            x=CONSTS.MONAT,
-            y="Stadtteil",
-            z="Anzahl",
-            title="Verteilung der Unfälle: Stadtteile vs. Monate",
-            color_continuous_scale="Viridis",  # Farbskala
-        )
-
-        # Layout-Anpassungen für die Heatmap
-        heatmap_fig.update_layout(
-            xaxis_title="Monat",
-            yaxis_title="Stadtteil",
-            coloraxis_colorbar=dict(title="Unfälle"),  # Titel für die Farblegende
-            xaxis=dict(tickmode="array", tickvals=list(range(1, 13)), ticktext=[
-                "Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"
-            ]),  # Monatsnamen
-        )
-
-
         # Mapping der Unfallschwere
         order_map = {"2": "Leichtverletzt", "1": "Schwerverletzt", "0": "Tödlicher Ausgang"}
         color_map = {"Leichtverletzt": "green", "Schwerverletzt": "orange", "Tödlicher Ausgang": "red"}
@@ -546,8 +522,7 @@ def update_extended_overview_graph(selected_chart):
 
         # Rückgabe der Diagramme
         return html.Div([
-            dcc.Graph(figure=severity_fig),
-            dcc.Graph(figure=heatmap_fig)                       
+            dcc.Graph(figure=severity_fig)                     
         ])
 
     elif selected_chart == "accident-types-frequency":
