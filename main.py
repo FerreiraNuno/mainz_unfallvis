@@ -375,6 +375,8 @@ def update_overview_graph(selected_chart):
 
     return html.Div("Bitte eine valide Option auswählen.")  # Fallback
 
+
+
 # Second Overview ----------------------------------------------------------------------------------------------------------------------
 @app.callback(
     Output("overview-extended-graph-container", "children"),
@@ -392,23 +394,112 @@ def update_extended_overview_graph(selected_chart):
             title="Unfallhäufigkeit: Stunden vs. Monate",
         )
         
-        # Liniendiagramm: Gesamte Unfallzahlen pro Monat und Stunde
-        line_data = accidents_data.groupby([CONSTS.MONAT, CONSTS.STUNDE, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
         order_map = {"2": "Leichtverletzt", "1": "Schwerverletzt", "0": "Tödlicher Ausgang"}
         color_map = {"Leichtverletzt": "green", "Schwerverletzt": "orange", "Tödlicher Ausgang": "red"}
-        line_data[CONSTS.UNFALLKLASSE_WAHR] = line_data[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
-        line_fig = px.line(
-            line_data,
+        # Daten für monatliche Unfallzahlen aggregieren
+        monthly_data = accidents_data.groupby([CONSTS.MONAT, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
+        monthly_data[CONSTS.UNFALLKLASSE_WAHR] = monthly_data[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
+
+        # Liniendiagramm für Monate
+        monthly_line_fig = px.line(
+            monthly_data,
+            x=CONSTS.MONAT,
+            y="Anzahl",
+            color=CONSTS.UNFALLKLASSE_WAHR,
+            title="Unfallzahlen pro Monat",
+            color_discrete_map=color_map,
+            markers=True  # Optional: Punkte für die Werte hinzufügen
+        )
+
+        # Layout-Anpassungen für Monat-Diagramm
+        monthly_line_fig.update_layout(
+            xaxis_title="Monat",
+            yaxis_title="Anzahl der Unfälle",
+            legend_title="Unfallklasse"
+        )
+
+        # Daten für stündliche Unfallzahlen aggregieren
+        hourly_data = accidents_data.groupby([CONSTS.STUNDE, CONSTS.UNFALLKLASSE_WAHR]).size().reset_index(name="Anzahl")
+        hourly_data[CONSTS.UNFALLKLASSE_WAHR] = hourly_data[CONSTS.UNFALLKLASSE_WAHR].map(order_map)
+
+        # Liniendiagramm für Stunden
+        hourly_line_fig = px.line(
+            hourly_data,
             x=CONSTS.STUNDE,
             y="Anzahl",
             color=CONSTS.UNFALLKLASSE_WAHR,
-            facet_row=CONSTS.MONAT,
-            title="Unfallzahlen nach Stunde und Monat",
+            title="Unfallzahlen pro Stunde",
             color_discrete_map=color_map,
+            markers=True  # Optional: Punkte für die Werte hinzufügen
         )
-        
-        return html.Div([dcc.Graph(figure=heatmap_fig), dcc.Graph(figure=line_fig)])
-    
+
+        # Layout-Anpassungen für Stunden-Diagramm
+        hourly_line_fig.update_layout(
+            xaxis_title="Stunde",
+            yaxis_title="Anzahl der Unfälle",
+            legend_title="Unfallklasse"
+        )
+
+        # Rückgabe der beiden Diagramme
+        return html.Div([
+            dcc.Graph(figure=heatmap_fig),
+            dcc.Graph(figure=monthly_line_fig),
+            dcc.Graph(figure=hourly_line_fig)
+        ])
+
+    elif selected_chart == 'accident-region':
+        # Daten für die Heatmap vorbereiten: Gruppierung nach Stadtteil und Monat
+        heatmap_data = accidents_data.groupby(["Stadtteil", CONSTS.MONAT]).size().reset_index(name="Anzahl")
+
+        # Heatmap erstellen
+        heatmap_fig = px.density_heatmap(
+            heatmap_data,
+            x=CONSTS.MONAT,
+            y="Stadtteil",
+            z="Anzahl",
+            title="Verteilung der Unfälle: Stadtteile vs. Monate",
+            color_continuous_scale="Viridis",  # Farbskala
+        )
+
+        # Layout-Anpassungen für die Heatmap
+        heatmap_fig.update_layout(
+            xaxis_title="Monat",
+            yaxis_title="Stadtteil",
+            coloraxis_colorbar=dict(title="Unfälle"),  # Titel für die Farblegende
+            xaxis=dict(tickmode="array", tickvals=list(range(1, 13)), ticktext=[
+                "Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"
+            ]),  # Monatsnamen
+        )
+
+
+        # Daten für Unfälle pro Stadtteil aggregieren
+        district_data = accidents_data.groupby("Stadtteil").size().reset_index(name="Anzahl")
+        district_data = district_data.sort_values("Anzahl", ascending=False)  # Optional: Stadtteile nach Anzahl sortieren
+
+        # Balkendiagramm für Stadtteile
+        district_bar_fig = px.bar(
+            district_data,
+            x="Stadtteil",
+            y="Anzahl",
+            title="Anzahl der Unfälle pro Stadtteil",
+            color="Anzahl",
+            color_continuous_scale="Viridis",  # Farbskala
+        )
+
+        # Layout-Anpassungen für das Diagramm
+        district_bar_fig.update_layout(
+            xaxis_title="Stadtteil",
+            yaxis_title="Anzahl der Unfälle",
+            coloraxis_colorbar=dict(title="Unfälle"),  # Titel für die Farblegende
+            xaxis_tickangle=45  # Optional: Dreht die Beschriftungen der Stadtteile
+        )
+
+        # Rückgabe der Diagramme
+        return html.Div([
+            dcc.Graph(figure=heatmap_fig),
+            dcc.Graph(figure=district_bar_fig)
+        ])
+
     elif selected_chart == "accident-types-frequency":
         # Zuerst definierst du das "order_map" und wandelst die Werte in den richtigen Text um
         order_map_unfallart = {
@@ -628,6 +719,7 @@ def render_tab_content(tab_value):
                         id="overview-selection-extended",
                         options=[
                             {"label": "Zeitliche Verteilung der Unfälle", "value": "temporal-accidents-distribution"},
+                            {"label": "Verteilung der Unfälle auf Stadtteile", "value": "accident-region"},
                             {"label": "Häufigkeit von Unfallarten und -typen", "value": "accident-types-frequency"},
                             {"label": "Einfluss der Umweltbedingungen", "value": "environmental-conditions-impact"},
                             {"label": "Unfallbeteiligte Fahrzeugarten", "value": "vehicle-participation"},
