@@ -932,10 +932,10 @@ def main():
             ),
             dcc.Tabs(
                 id="tabs",
-                value="ueberblick",
+                value="erkunden",
                 children=[
-                    dcc.Tab(label="Überblick", value="ueberblick", style={"font-weight": "bold"}),
                     dcc.Tab(label="Erkunden", value="erkunden", style={"font-weight": "bold"}),
+                    dcc.Tab(label="Überblick", value="ueberblick", style={"font-weight": "bold"}),
                 ]
             ),
             html.Div(id="tab-content"),
