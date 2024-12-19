@@ -31,7 +31,11 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                     figure=prepare_map(
                                         CONSTS.UNFALLKLASSE_WAHR, accidents_data
                                     ),
-                                    config={"scrollZoom": True},
+                                    config={
+                                        "scrollZoom": True,
+                                        "displayModeBar": False,
+                                        "displaylogo": False
+                                    },
                                 ),
                             ),
                             dbc.Row([
@@ -77,7 +81,7 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                 dcc.Graph(
                                     id="pairplot-shap-values",
                                     config={"displayModeBar": False},
-                                    style={"height": "400px"}
+                                    style={"height": "400px", "width": "600px"}
                                 )
                             ),
                         ]
@@ -90,7 +94,20 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                     id="bar-chart-predicted-accident-class",
                                     config={"displayModeBar": False},
                                     # Adjust as needed for consistent sizing
-                                    style={"height": "400px"}
+                                    style={"height": "400px", "width": "700px"}
+                                )
+                            ),
+                        ]
+                    ),
+
+                    dbc.Col(
+                        [
+                            html.Div(
+                                dcc.Graph(
+                                    id="uncertainty-graph",
+                                    config={"displayModeBar": False},
+                                    # Adjust as needed for consistent sizing
+                                    style={"height": "400px", "width": "350px"}
                                 )
                             ),
                         ]
@@ -213,12 +230,20 @@ def update_bar_chart_and_details(click_data, accidents_data):
                 }
             )
 
+            # oneliner to get string of unfallklasse wahr ("Tödlich, Schwerverletzt, Leichtverletzt")
+            unfallklasse_wahr = ["Tödlich", "Schwerverletzt",
+                                 "Leichtverletzt"][int(point_data[CONSTS.UNFALLKLASSE_WAHR].values[0])]
+            unfallklasse_bestimmt = ["Tödlich", "Schwerverletzt",
+                                     "Leichtverletzt"][int(point_data[CONSTS.UNFALLKLASSE_BESTIMMT].values[0])]
+
             fig = px.bar(
                 bar_data,
                 x="Unfallklasse Vorhersage",
                 y="Value",
-                title="Vorhersage nach Unfallklasse"
+                title=f"Vorhersage: {unfallklasse_wahr}   Tatsächlich: {
+                    unfallklasse_bestimmt}",
             )
+
             fig.update_yaxes(title_text="Berechnete Wahrscheinlichkeit in %")
             fig.update_traces(marker_color=["red", "orange", "green"])
 
@@ -227,8 +252,11 @@ def update_bar_chart_and_details(click_data, accidents_data):
             background_color = "red" if unfallklasse == "0" else "yellow" if unfallklasse == "1" else "green"
             details = dbc.Row([
                 dbc.Col(html.Div([
+                    html.Br(),
+                    html.Br(),
+                    html.Br(),
                     html.H1(f"{rewriteDict[CONSTS.UNFALLKLASSE_WAHR].get(
-                        str(unfallklasse), 'Unbekannt')}", style={"backgroundColor": background_color, "borderRadius": "5px", "padding-left": "10px"}),
+                        str(unfallklasse), 'Unbekannt')}", style={"backgroundColor": background_color, "borderRadius": "5px", "paddingLeft": "10px"}),
                     html.Br(),
                     html.H2("Unfallbeteiligte"),
                     *(html.P("Fahrrad")
@@ -247,6 +275,8 @@ def update_bar_chart_and_details(click_data, accidents_data):
                         str(point_data[CONSTS.UNFALLART].values[0]), 'Unbekannt')}"),
                     html.P(f"{rewriteDict[CONSTS.UNFALLTYP].get(
                         str(point_data[CONSTS.UNFALLTYP].values[0]), 'Unbekannt')}"),
+                    html.P(f"Uhrzeit: {
+                           point_data[CONSTS.STUNDE].values[0]} Uhr"),
                     html.Br(),
                     html.H2("Verhältnisse"),
                     html.P(f"{rewriteDict[CONSTS.LICHTVERHAELTNISSE].get(
@@ -279,35 +309,71 @@ def update_scatter_plot(click_data, accidents_data):
             scatter_data = pd.DataFrame(
                 {
                     "Feature": [
-                        "IstRad",
-                        "IstPKW",
-                        "IstFuss",
-                        "IstKrad",
-                        "IstSonstig",
-                        "TagKategorie",
-                        "Monat",
-                        "Stunde",
-                        "Unfallart",
-                        "Unfalltyp",
-                        "Lichtverhältnisse",
-                        "Straßenverhältnisse",
-                        "Straßenart",
-                    ],
-                    "SHAP-Wert": [
-                        point_data[CONSTS.SHAP_0_ISTRAD].values[0],
-                        point_data[CONSTS.SHAP_0_ISTPKW].values[0],
-                        point_data[CONSTS.SHAP_0_ISTFUSS].values[0],
-                        point_data[CONSTS.SHAP_0_ISTKRAD].values[0],
-                        point_data[CONSTS.SHAP_0_ISTSONSTIG].values[0],
-                        point_data[CONSTS.SHAP_0_TAGKATEGORIE].values[0],
-                        point_data[CONSTS.SHAP_0_MONAT].values[0],
-                        point_data[CONSTS.SHAP_0_STUNDE].values[0],
-                        point_data[CONSTS.SHAP_0_UNFALLART].values[0],
-                        point_data[CONSTS.SHAP_0_UNFALLTYP].values[0],
-                        point_data[CONSTS.SHAP_0_LICHTVERHAELTNISSE].values[0],
-                        point_data[CONSTS.SHAP_0_STRASSENVERHAELTNISSE].values[0],
-                        point_data[CONSTS.SHAP_0_STRASSENART].values[0],
-                    ],
+                        CONSTS.ISTRAD,
+                        CONSTS.ISTPKW,
+                        CONSTS.ISTFUSS,
+                        CONSTS.ISTKRAD,
+                        CONSTS.ISTSONSTIG,
+                        CONSTS.TAGKATEGORIE,
+                        CONSTS.MONAT,
+                        CONSTS.STUNDE,
+                        CONSTS.UNFALLART,
+                        CONSTS.UNFALLTYP,
+                        CONSTS.LICHTVERHAELTNISSE,
+                        CONSTS.STRASSENVERHAELTNISSE,
+                        CONSTS.STRASSENART,
+                    ] * 3,  # Wiederhole Features für jede Unfallklasse
+                    "SHAP-Wert": (
+                        [
+                            point_data[CONSTS.SHAP_0_ISTRAD].values[0],
+                            point_data[CONSTS.SHAP_0_ISTPKW].values[0],
+                            point_data[CONSTS.SHAP_0_ISTFUSS].values[0],
+                            point_data[CONSTS.SHAP_0_ISTKRAD].values[0],
+                            point_data[CONSTS.SHAP_0_ISTSONSTIG].values[0],
+                            point_data[CONSTS.SHAP_0_TAGKATEGORIE].values[0],
+                            point_data[CONSTS.SHAP_0_MONAT].values[0],
+                            point_data[CONSTS.SHAP_0_STUNDE].values[0],
+                            point_data[CONSTS.SHAP_0_UNFALLART].values[0],
+                            point_data[CONSTS.SHAP_0_UNFALLTYP].values[0],
+                            point_data[CONSTS.SHAP_0_LICHTVERHAELTNISSE].values[0],
+                            point_data[CONSTS.SHAP_0_STRASSENVERHAELTNISSE].values[0],
+                            point_data[CONSTS.SHAP_0_STRASSENART].values[0],
+                        ]
+                        + [
+                            point_data[CONSTS.SHAP_1_ISTRAD].values[0],
+                            point_data[CONSTS.SHAP_1_ISTPKW].values[0],
+                            point_data[CONSTS.SHAP_1_ISTFUSS].values[0],
+                            point_data[CONSTS.SHAP_1_ISTKRAD].values[0],
+                            point_data[CONSTS.SHAP_1_ISTSONSTIG].values[0],
+                            point_data[CONSTS.SHAP_1_TAGKATEGORIE].values[0],
+                            point_data[CONSTS.SHAP_1_MONAT].values[0],
+                            point_data[CONSTS.SHAP_1_STUNDE].values[0],
+                            point_data[CONSTS.SHAP_1_UNFALLART].values[0],
+                            point_data[CONSTS.SHAP_1_UNFALLTYP].values[0],
+                            point_data[CONSTS.SHAP_1_LICHTVERHAELTNISSE].values[0],
+                            point_data[CONSTS.SHAP_1_STRASSENVERHAELTNISSE].values[0],
+                            point_data[CONSTS.SHAP_1_STRASSENART].values[0],
+                        ]
+                        + [
+                            point_data[CONSTS.SHAP_2_ISTRAD].values[0],
+                            point_data[CONSTS.SHAP_2_ISTPKW].values[0],
+                            point_data[CONSTS.SHAP_2_ISTFUSS].values[0],
+                            point_data[CONSTS.SHAP_2_ISTKRAD].values[0],
+                            point_data[CONSTS.SHAP_2_ISTSONSTIG].values[0],
+                            point_data[CONSTS.SHAP_2_TAGKATEGORIE].values[0],
+                            point_data[CONSTS.SHAP_2_MONAT].values[0],
+                            point_data[CONSTS.SHAP_2_STUNDE].values[0],
+                            point_data[CONSTS.SHAP_2_UNFALLART].values[0],
+                            point_data[CONSTS.SHAP_2_UNFALLTYP].values[0],
+                            point_data[CONSTS.SHAP_2_LICHTVERHAELTNISSE].values[0],
+                            point_data[CONSTS.SHAP_2_STRASSENVERHAELTNISSE].values[0],
+                            point_data[CONSTS.SHAP_2_STRASSENART].values[0],
+                        ]
+                    ),
+                    "Unfallklasse": (
+                        ["Verstorben"] * 13 + ["Schwerverletzt"] * \
+                        13 + ["Leichtverletzt"] * 13
+                    ),
                 }
             )
 
@@ -316,12 +382,48 @@ def update_scatter_plot(click_data, accidents_data):
                 scatter_data,
                 x="Feature",
                 y="SHAP-Wert",
+                color="Unfallklasse",
                 title="Einfluss der Features auf die Vorhersage",
+                color_discrete_map={
+                    "Verstorben": "red",
+                    "Schwerverletzt": "orange",
+                    "Leichtverletzt": "green",
+                },
+                hover_data=["Feature"],
             )
 
             fig.update_yaxes(title_text="SHAP-Wert")
             fig.update_xaxes(title_text="Feature")
-            fig.update_traces(marker=dict(size=10, color="blue"))
+            fig.update_traces(marker=dict(size=10))
+
+            return fig
+    return no_update
+
+
+def update_uncertainty_plot(click_data, accidents_data):
+    if click_data:
+        hovered_lat = click_data["points"][0]["lat"]
+        hovered_lon = click_data["points"][0]["lon"]
+
+        # Filtern der Daten für den ausgewählten Punkt
+        point_data = accidents_data.loc[
+            (accidents_data[CONSTS.LATITUDE] == hovered_lat)
+            & (accidents_data[CONSTS.LONGITUDE] == hovered_lon)
+        ]
+
+        if not point_data.empty:
+            # Unsicherheitsdaten vorbereiten
+            uncertainty_score = point_data[CONSTS.UNSICHERHEITS_SCORE].values[0]
+
+            fig = px.bar(
+                x=["Unsicherheit"],
+                y=[uncertainty_score],
+                title="Unsicherheitsfaktor der Vorhersage",
+            )
+
+            fig.update_yaxes(title_text="Unsicherheitsfaktor", range=[0, 1])
+            fig.update_xaxes(title_text="")
+            fig.update_traces(marker_color="purple", width=0.5)
 
             return fig
     return no_update

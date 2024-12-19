@@ -4,7 +4,7 @@ import pandas as pd
 from config import *
 
 import consts as CONSTS
-from mapbox import prepare_map, render_map_tab, update_particpants_checklist, update_bar_chart_and_details, update_map, update_scatter_plot
+from mapbox import prepare_map, render_map_tab, update_particpants_checklist, update_bar_chart_and_details, update_map, update_scatter_plot, update_uncertainty_plot
 from helper import generateDateRangeByMinAndMaxDate, prepareData, prepare_marks
 from overview import update_overview_graph, update_extended_overview_graph, render_overview
 from layout import get_layout
@@ -65,6 +65,19 @@ def update_map_callback(values, highlighting_dropdown, participants_checklist):
     return update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly)
 
 
+# Callback for bar chart and details
+@app.callback(
+    [
+        Output("bar-chart-predicted-accident-class", "figure"),
+        Output("details-row", "children"),
+    ],
+    Input("map", "clickData")
+)
+def update_bar_chart_callback(click_data):
+    return update_bar_chart_and_details(click_data, accidents_data)
+
+
+# Callback for the pairplot/scatter plot
 @app.callback(
     Output("pairplot-shap-values", "figure"),
     Input("map", "clickData")
@@ -73,16 +86,13 @@ def update_pairplot_callback(click_data):
     return update_scatter_plot(click_data, accidents_data)
 
 
-# Callback for the map click data
+# Callback for the uncertainty graph
 @app.callback(
-    [
-        Output("bar-chart-predicted-accident-class", "figure"),
-        Output("details-row", "children")
-    ],
+    Output("uncertainty-graph", "figure"),
     Input("map", "clickData")
 )
-def update_bar_chart_callback(click_data):
-    return update_bar_chart_and_details(click_data, accidents_data)
+def update_uncertainty_graph(click_data):
+    return update_uncertainty_plot(click_data, accidents_data)
 
 
 # Callback for the participants checklist
