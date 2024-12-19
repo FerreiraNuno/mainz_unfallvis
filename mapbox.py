@@ -1,5 +1,5 @@
 from dash import no_update
-import datetime
+from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
@@ -62,18 +62,29 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                     ),
                     dbc.Col(
                         [
-                            dbc.Col(
-                                [
-                                    html.Div(
-                                        dcc.Graph(
-                                            id="pairplot-shap-values",
-                                            config={"displayModeBar": False},
-                                            style={"height": "400px"}
-                                        )
-                                    ),
-                                ]
-                            ),
+                            html.Div(id="details-row")
+                        ],
+                        style={"alignItems": "end"}
+                    )
+                ],
+            ),
 
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            html.Div(
+                                dcc.Graph(
+                                    id="pairplot-shap-values",
+                                    config={"displayModeBar": False},
+                                    style={"height": "400px"}
+                                )
+                            ),
+                        ]
+                    ),
+
+                    dbc.Col(
+                        [
                             html.Div(
                                 dcc.Graph(
                                     id="bar-chart-predicted-accident-class",
@@ -85,29 +96,21 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                         ]
                     ),
 
-
-                ],
-                style={"alignItems": "end"}
-            )
+                ]
+            ),
         ]
     )
 
 
 def prepare_map(attr_to_color_by, data):
-    # Add scatter map with coordinates of accidents
     map_fig = px.scatter_mapbox(
         data,
         lat=CONSTS.LATITUDE,
         lon=CONSTS.LONGITUDE,
         hover_name=CONSTS.STADTTEIL,
         hover_data=[
-            CONSTS.UNFALLKLASSE_BESTIMMT,
-            CONSTS.STRASSENVERHAELTNISSE,
-            CONSTS.STRASSENART,
-            CONSTS.LICHTVERHAELTNISSE,
-            CONSTS.UNFALLTYP,
         ],
-        custom_data=[data.index],  # Pass the DataFrame index as custom data
+        custom_data=[data.index],
         zoom=12,
         color=attr_to_color_by,
         color_discrete_map=customColoringMap.get(attr_to_color_by)
@@ -157,12 +160,12 @@ def update_map(values, highlighting_dropdown, participants_checklist, accidents_
 
 def update_particpants_checklist(click_data, accidents_data):
     if click_data:
-        hovered_lat = click_data["points"][0]["lat"]
-        hovered_lon = click_data["points"][0]["lon"]
+        clicked_lat = click_data["points"][0]["lat"]
+        clicked_lon = click_data["points"][0]["lon"]
 
         point_data = accidents_data.loc[
-            (accidents_data[CONSTS.LATITUDE] == hovered_lat)
-            & (accidents_data[CONSTS.LONGITUDE] == hovered_lon)
+            (accidents_data[CONSTS.LATITUDE] == clicked_lat)
+            & (accidents_data[CONSTS.LONGITUDE] == clicked_lon)
         ]
 
         if not point_data.empty:
@@ -183,29 +186,30 @@ def update_particpants_checklist(click_data, accidents_data):
     return []
 
 
-def update_bar_chart(click_data, accidents_data):
+def update_bar_chart_and_details(click_data, accidents_data):
     if click_data:
-        hovered_lat = click_data["points"][0]["lat"]
-        hovered_lon = click_data["points"][0]["lon"]
+        clicked_lat = click_data["points"][0]["lat"]
+        clicked_lon = click_data["points"][0]["lon"]
 
         point_data = accidents_data.loc[
-            (accidents_data[CONSTS.LATITUDE] == hovered_lat)
-            & (accidents_data[CONSTS.LONGITUDE] == hovered_lon)
+            (accidents_data[CONSTS.LATITUDE] == clicked_lat) &
+            (accidents_data[CONSTS.LONGITUDE] == clicked_lon)
         ]
 
         if not point_data.empty:
+            # Update the bar chart
             bar_data = pd.DataFrame(
                 {
                     "Unfallklasse Vorhersage": [
                         "Tödlicher Ausgang",
                         "Schwerverletzte",
-                        "Leichtverletzte",
+                        "Leichtverletzte"
                     ],
                     "Value": [
                         point_data[CONSTS.WAHRSCHEINLICHKEIT_KLASSE_0].values[0],
                         point_data[CONSTS.WAHRSCHEINLICHKEIT_KLASSE_1].values[0],
                         point_data[CONSTS.WAHRSCHEINLICHKEIT_KLASSE_2].values[0],
-                    ],
+                    ]
                 }
             )
 
@@ -213,23 +217,61 @@ def update_bar_chart(click_data, accidents_data):
                 bar_data,
                 x="Unfallklasse Vorhersage",
                 y="Value",
-                title="Vorhersage nach Unfallklasse",
+                title="Vorhersage nach Unfallklasse"
             )
             fig.update_yaxes(title_text="Berechnete Wahrscheinlichkeit in %")
             fig.update_traces(marker_color=["red", "orange", "green"])
-            return fig
-    return no_update
+
+            # Update the details row
+            unfallklasse = point_data[CONSTS.UNFALLKLASSE_WAHR].values[0]
+            background_color = "red" if unfallklasse == "0" else "yellow" if unfallklasse == "1" else "green"
+            details = dbc.Row([
+                dbc.Col(html.Div([
+                    html.H1(f"{rewriteDict[CONSTS.UNFALLKLASSE_WAHR].get(
+                        str(unfallklasse), 'Unbekannt')}", style={"backgroundColor": background_color, "borderRadius": "5px", "padding-left": "10px"}),
+                    html.Br(),
+                    html.H2("Unfallbeteiligte"),
+                    *(html.P("Fahrrad")
+                      for _ in [1] if point_data[CONSTS.ISTRAD].values[0] == 1),
+                    *(html.P("PKW")
+                      for _ in [1] if point_data[CONSTS.ISTPKW].values[0] == 1),
+                    *(html.P("Fußgänger")
+                      for _ in [1] if point_data[CONSTS.ISTFUSS].values[0] == 1),
+                    *(html.P("Motorrad")
+                      for _ in [1] if point_data[CONSTS.ISTKRAD].values[0] == 1),
+                    *(html.P("Sonstigem")
+                      for _ in [1] if point_data[CONSTS.ISTSONSTIG].values[0] == 1),
+                    html.Br(),
+                    html.H2("Unfallinformationen"),
+                    html.P(f"{rewriteDict[CONSTS.UNFALLART].get(
+                        str(point_data[CONSTS.UNFALLART].values[0]), 'Unbekannt')}"),
+                    html.P(f"{rewriteDict[CONSTS.UNFALLTYP].get(
+                        str(point_data[CONSTS.UNFALLTYP].values[0]), 'Unbekannt')}"),
+                    html.Br(),
+                    html.H2("Verhältnisse"),
+                    html.P(f"{rewriteDict[CONSTS.LICHTVERHAELTNISSE].get(
+                        str(point_data[CONSTS.LICHTVERHAELTNISSE].values[0]), 'Unbekannt')}"),
+                    html.P(f"{rewriteDict[CONSTS.STRASSENVERHAELTNISSE].get(
+                        str(point_data[CONSTS.STRASSENVERHAELTNISSE].values[0]), 'Unbekannt')}"),
+                    html.P(f"{rewriteDict[CONSTS.STRASSENART].get(
+                        str(point_data[CONSTS.STRASSENART].values[0]), 'Unbekannt')}")
+                ]))
+            ], className="mt-4")
+
+            return fig, details
+
+    return no_update, no_update
 
 
 def update_scatter_plot(click_data, accidents_data):
     if click_data:
-        hovered_lat = click_data["points"][0]["lat"]
-        hovered_lon = click_data["points"][0]["lon"]
+        clicked_lat = click_data["points"][0]["lat"]
+        clicked_lon = click_data["points"][0]["lon"]
 
         # Filtern der Daten für den ausgewählten Punkt
         point_data = accidents_data.loc[
-            (accidents_data[CONSTS.LATITUDE] == hovered_lat)
-            & (accidents_data[CONSTS.LONGITUDE] == hovered_lon)
+            (accidents_data[CONSTS.LATITUDE] == clicked_lat)
+            & (accidents_data[CONSTS.LONGITUDE] == clicked_lon)
         ]
 
         if not point_data.empty:
