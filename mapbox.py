@@ -1,5 +1,8 @@
+from dash import no_update
 import datetime
 import pandas as pd
+import matplotlib.pyplot as plt
+import plotly.express as px
 from dash import html, dcc, no_update
 import dash_bootstrap_components as dbc
 import consts as CONSTS
@@ -22,6 +25,15 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                     value=highlighting_dropdown[0],
                                 ),
                             ),
+                            html.Div(
+                                dcc.Graph(
+                                    id="map",
+                                    figure=prepare_map(
+                                        CONSTS.UNFALLKLASSE_WAHR, accidents_data
+                                    ),
+                                    config={"scrollZoom": True},
+                                ),
+                            ),
                             dbc.Row([
                                 dbc.Col(
                                     html.Div(
@@ -33,30 +45,8 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                         )
                                     ),
                                 ),
-                                dbc.Col(
-                                    html.Div(
-                                        dcc.Checklist(
-                                            participants_view_checklist,
-                                            id="participants_view_checklist",
-                                            value=[],
-                                            inline=True,
-                                        )
-                                    ),
-                                )
                             ],
                                 className="hstack gap-3"
-                            ),
-                            html.Div(
-                                dcc.Graph(
-                                    id="map",
-                                    figure=prepare_map(
-                                        CONSTS.UNFALLKLASSE_WAHR, accidents_data),
-                                    config={"scrollZoom": True},
-                                    style={"padding": "0", "margin": "0",
-                                           "height": "100vh", "width": "100%"},
-                                ),
-                                style={"padding": "0", "margin": "0",
-                                       "height": "100vh", "width": "100%"},
                             ),
                             html.Div(
                                 dcc.RangeSlider(
@@ -72,23 +62,30 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                     ),
                     dbc.Col(
                         [
-                            dbc.Row(
-                                dbc.Col(
+                            dbc.Col(
+                                [
                                     html.Div(
                                         dcc.Graph(
-                                            id="bar-chart-predicted-accident-class"
+                                            id="pairplot-shap-values",
+                                            config={"displayModeBar": False},
+                                            style={"height": "400px"}
                                         )
                                     ),
+                                ]
+                            ),
+
+                            html.Div(
+                                dcc.Graph(
+                                    id="bar-chart-predicted-accident-class",
+                                    config={"displayModeBar": False},
+                                    # Adjust as needed for consistent sizing
+                                    style={"height": "400px"}
                                 )
                             ),
-                            dbc.Row(
-                                dbc.Col(
-                                    html.Div(
-                                    )
-                                )
-                            ),
-                        ],
+                        ]
                     ),
+
+
                 ],
                 style={"alignItems": "end"}
             )
@@ -119,9 +116,11 @@ def prepare_map(attr_to_color_by, data):
         mapbox_style="https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json",
         legend=dict(orientation="h", yanchor="bottom",
                     y=1.02, xanchor="right", x=1),
-        height=800,  # Set the height of the map (adjust as needed)
-        width=1000   # Set the width of the map (adjust as needed)
+        height=700,
+        width=800,
+        margin={"l": 10, "r": 0, "t": 0, "b": 0},  # Remove all margins
     )
+
     # Rewrite Labels
     map_fig.for_each_trace(
         lambda trace: (
@@ -218,5 +217,69 @@ def update_bar_chart(click_data, accidents_data):
             )
             fig.update_yaxes(title_text="Berechnete Wahrscheinlichkeit in %")
             fig.update_traces(marker_color=["red", "orange", "green"])
+            return fig
+    return no_update
+
+
+def update_scatter_plot(click_data, accidents_data):
+    if click_data:
+        hovered_lat = click_data["points"][0]["lat"]
+        hovered_lon = click_data["points"][0]["lon"]
+
+        # Filtern der Daten für den ausgewählten Punkt
+        point_data = accidents_data.loc[
+            (accidents_data[CONSTS.LATITUDE] == hovered_lat)
+            & (accidents_data[CONSTS.LONGITUDE] == hovered_lon)
+        ]
+
+        if not point_data.empty:
+            # Daten für den Scatterplot vorbereiten
+            scatter_data = pd.DataFrame(
+                {
+                    "Feature": [
+                        "IstRad",
+                        "IstPKW",
+                        "IstFuss",
+                        "IstKrad",
+                        "IstSonstig",
+                        "TagKategorie",
+                        "Monat",
+                        "Stunde",
+                        "Unfallart",
+                        "Unfalltyp",
+                        "Lichtverhältnisse",
+                        "Straßenverhältnisse",
+                        "Straßenart",
+                    ],
+                    "SHAP-Wert": [
+                        point_data[CONSTS.SHAP_0_ISTRAD].values[0],
+                        point_data[CONSTS.SHAP_0_ISTPKW].values[0],
+                        point_data[CONSTS.SHAP_0_ISTFUSS].values[0],
+                        point_data[CONSTS.SHAP_0_ISTKRAD].values[0],
+                        point_data[CONSTS.SHAP_0_ISTSONSTIG].values[0],
+                        point_data[CONSTS.SHAP_0_TAGKATEGORIE].values[0],
+                        point_data[CONSTS.SHAP_0_MONAT].values[0],
+                        point_data[CONSTS.SHAP_0_STUNDE].values[0],
+                        point_data[CONSTS.SHAP_0_UNFALLART].values[0],
+                        point_data[CONSTS.SHAP_0_UNFALLTYP].values[0],
+                        point_data[CONSTS.SHAP_0_LICHTVERHAELTNISSE].values[0],
+                        point_data[CONSTS.SHAP_0_STRASSENVERHAELTNISSE].values[0],
+                        point_data[CONSTS.SHAP_0_STRASSENART].values[0],
+                    ],
+                }
+            )
+
+            # Scatterplot erstellen
+            fig = px.scatter(
+                scatter_data,
+                x="Feature",
+                y="SHAP-Wert",
+                title="Einfluss der Features auf die Vorhersage",
+            )
+
+            fig.update_yaxes(title_text="SHAP-Wert")
+            fig.update_xaxes(title_text="Feature")
+            fig.update_traces(marker=dict(size=10, color="blue"))
+
             return fig
     return no_update

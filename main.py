@@ -4,7 +4,7 @@ import pandas as pd
 from config import *
 
 import consts as CONSTS
-from mapbox import prepare_map, render_map_tab, update_particpants_checklist, update_bar_chart, update_map
+from mapbox import prepare_map, render_map_tab, update_particpants_checklist, update_bar_chart, update_map, update_scatter_plot
 from helper import generateDateRangeByMinAndMaxDate, prepareData, prepare_marks
 from overview import update_overview_graph, update_extended_overview_graph, render_overview
 from layout import get_layout
@@ -65,7 +65,16 @@ def update_map_callback(values, highlighting_dropdown, participants_checklist):
     return update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly)
 
 
+@app.callback(
+    Output("pairplot-shap-values", "figure"),
+    Input("map", "clickData")
+)
+def update_pairplot_callback(click_data):
+    return update_scatter_plot(click_data, accidents_data)
+
 # Callback for the map click data
+
+
 @app.callback(
     Output("bar-chart-predicted-accident-class", "figure"),
     Input("map", "clickData")
