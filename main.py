@@ -6,7 +6,8 @@ from config import *
 import consts as CONSTS
 from mapbox import prepare_map, render_map_tab, update_particpants_checklist, update_bar_chart_and_details, update_map, update_scatter_plot, update_uncertainty_plot
 from helper import generateDateRangeByMinAndMaxDate, prepareData, prepare_marks
-from overview import update_overview_graph, update_extended_overview_graph, render_overview
+from overview import update_overview_graph, render_overview
+from overview_accident_conditions import render_overview_accident_conditions, update_extended_overview_graph
 from layout import get_layout
 
 # Load data -----------------------------------------------------------------------------------------------------------------------------
@@ -35,6 +36,8 @@ app = Dash(
 def render_tab_content(tab_value):
     if tab_value == "overview_tab":
         return render_overview()
+    elif tab_value == "overview_accident_conditions_tab":
+        return render_overview_accident_conditions()
     elif tab_value == "map_tab":
         marks_dict = prepare_marks(date_range_monthly)
         return render_map_tab(marks_dict, accidents_data, date_range_monthly)

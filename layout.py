@@ -53,7 +53,8 @@ def get_layout():
                 value="map_tab",
                 children=[
                       dcc.Tab(label="Karte", value="map_tab"),
-                      dcc.Tab(label="Überblick Daten", value="overview_tab"),
+                      dcc.Tab(label="Überblick Unfälle", value="overview_tab"),
+                      dcc.Tab(label="Überblick Unfallverhältnisse", value="overview_accident_conditions_tab"),
                 ]
             ),
             html.Div(id="tab-content"),
