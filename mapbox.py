@@ -240,8 +240,8 @@ def update_bar_chart_and_details(click_data, accidents_data):
                 bar_data,
                 x="Unfallklasse Vorhersage",
                 y="Value",
-                title=f"Vorhersage: {unfallklasse_wahr}   Tatsächlich: {
-                    unfallklasse_bestimmt}",
+                title=f"Vorhersage: {unfallklasse_bestimmt}   Tatsächlich: {
+                    unfallklasse_wahr}",
             )
 
             fig.update_yaxes(title_text="Berechnete Wahrscheinlichkeit in %")
