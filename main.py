@@ -62,10 +62,11 @@ def toggle_modal(info_btn_clicks):
     Output("map", "figure"),
     Input("year_range_slider", "value"),
     Input("highlighting_dropdown", "value"),
-    Input("participants_checklist", "value")
+    Input("participants_checklist", "value"),
+    Input("theme-dropdown", "value")
 )
-def update_map_callback(values, highlighting_dropdown, participants_checklist):
-    return update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly)
+def update_map_callback(values, highlighting_dropdown, participants_checklist, selected_theme):
+    return update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly, selected_theme)
 
 
 # Callback for bar chart and details
@@ -105,6 +106,15 @@ def update_uncertainty_graph(click_data):
 )
 def update_particpants_checklist_callback(click_data):
     return update_particpants_checklist(click_data, accidents_data)
+
+
+# Callback for the theme dropdown
+@app.callback(
+    Output("theme-dropdown", "value"),
+    Input("theme-dropdown", "value"),
+)
+def update_theme(selected_theme):
+    return selected_theme
 
 
 # Überblick Tab ---------------------------------------------------------------------------------------------------------------------

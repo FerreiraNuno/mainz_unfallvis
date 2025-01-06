@@ -1,6 +1,19 @@
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 
+theme_dropdown = dcc.Dropdown(
+    id="theme-dropdown",
+    options=[
+        {"label": "Normal", "value": "normal"},
+        {"label": "Protanopia", "value": "protanopia"},
+        {"label": "Tritanopia", "value": "tritanopia"},
+    ],
+    value="normal",
+    clearable=False,
+    style={"marginRight": "10px", "fontWeight": "bold",
+           "width": "200px", "color": "black"}
+)
+
 info_button_and_modal = html.Div([
     # Info-Button
     dbc.Button(
@@ -44,6 +57,11 @@ def get_layout():
                 [
                     html.H3("Unfall-Dashboard",
                             style={"display": "inline-block"}),
+                    html.Div([
+                        html.Div("Farbmodus:", style={"display": "inline-block",
+                                                      "marginLeft": "10px", "color": "gray"}),
+                        theme_dropdown
+                    ], style={"display": "flex", "flexDirection": "row", "alignItems": "baseline", "gap": "20px"}),
                     info_button_and_modal,  # Info-Button und Modal hinzufügen
                 ],
                 className="header-bar"  # Optional: Styling für die Leiste
@@ -54,7 +72,8 @@ def get_layout():
                 children=[
                       dcc.Tab(label="Karte", value="map_tab"),
                       dcc.Tab(label="Überblick Unfälle", value="overview_tab"),
-                      dcc.Tab(label="Überblick Unfallverhältnisse", value="overview_accident_conditions_tab"),
+                      dcc.Tab(label="Überblick Unfallverhältnisse",
+                              value="overview_accident_conditions_tab"),
                 ]
             ),
             html.Div(id="tab-content"),

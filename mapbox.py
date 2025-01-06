@@ -119,7 +119,8 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
     )
 
 
-def prepare_map(attr_to_color_by, data):
+def prepare_map(attr_to_color_by, data, theme="normal"):
+    map_style = "https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json"
     map_fig = px.scatter_mapbox(
         data,
         lat=CONSTS.LATITUDE,
@@ -130,10 +131,10 @@ def prepare_map(attr_to_color_by, data):
         custom_data=[data.index],
         zoom=12,
         color=attr_to_color_by,
-        color_discrete_map=customColoringMap.get(attr_to_color_by)
+        color_discrete_map=customColoringMap[theme].get(attr_to_color_by)
     )
     map_fig.update_layout(
-        mapbox_style="https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json",
+        mapbox_style=map_style,
         legend=dict(orientation="h", yanchor="bottom",
                     y=1.02, xanchor="right", x=1),
         height=700,
@@ -152,7 +153,7 @@ def prepare_map(attr_to_color_by, data):
     return map_fig
 
 
-def update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly):
+def update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly, theme="normal"):
     filtered_data = accidents_data
     if values is not None:
         marks_dict = dict(date_range_monthly)
@@ -172,7 +173,7 @@ def update_map(values, highlighting_dropdown, participants_checklist, accidents_
                 lambda x: (
                     (x[participant] == 1)
                 )]
-    return prepare_map(highlighting_dropdown, filtered_data)
+    return prepare_map(highlighting_dropdown, filtered_data, theme)
 
 
 def update_particpants_checklist(click_data, accidents_data):
@@ -391,7 +392,6 @@ def update_scatter_plot(click_data, accidents_data):
                 },
                 hover_data=["Feature"],
             )
-
             fig.update_yaxes(title_text="SHAP-Wert")
             fig.update_xaxes(title_text="Feature")
             fig.update_traces(marker=dict(size=10))
