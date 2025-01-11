@@ -1,5 +1,5 @@
 import consts as CONSTS
-import plotly.express as px
+from dash import html
 
 rewrite_unfallklasse_wahr = {
     "0": "Unfall mit Getöteten",
@@ -266,6 +266,30 @@ participants_checklist = [
     {'label': 'PKW', 'value': CONSTS.ISTPKW},
     {'label': 'Fahrrad', 'value': CONSTS.ISTRAD},
     {'label': 'Sonstiges', 'value': CONSTS.ISTSONSTIG},
+]
+
+
+participants_checklist = [
+    {'label':  [
+                html.Img(src="assets/images/icons8-walking-50.png", alt="pedestrian", style={ "padding-left": 5, "padding-right": 20}, title="Fußgänger"),
+                #html.Span("Fußgänger", style={"font-size": 15, "padding-left": 10}),
+            ], 'value': CONSTS.ISTFUSS},
+    {'label':  [
+                html.Img(src="assets/images/icons8-motorcycle-50.png", alt="motorcycle", style={ "padding-left": 5, "padding-right": 20}, title="Motorrad"),
+                #html.Span('Motorrad', style={"font-size": 15, "padding-left": 10}),
+            ], 'value': CONSTS.ISTKRAD},
+    {'label':  [
+                html.Img(src="assets/images/icons8-car-50.png", alt="car", style={ "padding-left": 5, "padding-right": 20}, title="Auto"),
+                #html.Span('PKW', style={"font-size": 15, "padding-left": 10}),
+            ], 'value': CONSTS.ISTPKW},
+    {'label': [
+                html.Img(src="assets/images/icons8-bicycle-50.png", alt="bicycle", style={ "padding-left": 5, "padding-right": 20}, title="Fahrrad"),
+                #html.Span('Fahrrad', style={"font-size": 15, "padding-left": 10}),
+            ], 'value': CONSTS.ISTRAD},
+    {'label': [
+                html.Img(src="assets/images/icons8-train-50.png", alt="misc", style={ "padding-left": 5, "padding-right": 0}, title="Sonstiges"),
+                #html.Span('Sonstiges', style={"font-size": 15, "padding-left": 5}),
+            ], 'value': CONSTS.ISTSONSTIG},
 ]
 
 participants_view_checklist = [

@@ -2,7 +2,7 @@ from dash import dcc, html
 import consts as CONSTS
 from config import *
 import pandas as pd
-
+import plotly.express as px
 
 def render_overview_accident_conditions():
     return html.Div([

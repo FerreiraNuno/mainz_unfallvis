@@ -1,7 +1,6 @@
 from dash import no_update
 from datetime import datetime
 import pandas as pd
-import matplotlib.pyplot as plt
 import plotly.express as px
 from dash import html, dcc, no_update
 import dash_bootstrap_components as dbc
@@ -24,19 +23,36 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                     searchable=False,
                                     value=highlighting_dropdown[0],
                                 ),
+                                 style={
+                                    "width": "80%", 
+                                    "margin": "0 auto", 
+                                    "padding": "10px",  
+                                }
                             ),
-                            html.Div(
-                                dcc.Graph(
-                                    id="map",
-                                    figure=prepare_map(
-                                        CONSTS.UNFALLKLASSE_WAHR, accidents_data
+                            dbc.Row([
+                                dbc.Col(
+                                   html.Div(
+                                        dcc.Graph(
+                                            id="map",
+                                            figure=prepare_map(
+                                                CONSTS.UNFALLKLASSE_WAHR, accidents_data
+                                            ),
+                                            config={
+                                                "scrollZoom": True,
+                                                "displayModeBar": False,
+                                                "displaylogo": False,
+                                                "responsive": True
+                                            },
+                                        ),
+                                        style={
+                                            "width": "100%",
+                                            "justify-content": "center",
+                                            "align-items": "center",
+                                        },
                                     ),
-                                    config={
-                                        "scrollZoom": True,
-                                        "displayModeBar": False,
-                                        "displaylogo": False
-                                    },
                                 ),
+                            ],
+                                className="hstack gap-3"
                             ),
                             dbc.Row([
                                 dbc.Col(
@@ -46,7 +62,12 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                             id="participants_checklist",
                                             value=[],
                                             inline=True,
-                                        )
+                                        ),
+                                        style={
+                                            "display": "flex",
+                                            "justify-content": "center",
+                                            "align-items": "center",
+                                        }
                                     ),
                                 ),
                             ],
@@ -60,7 +81,10 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                     step=1,
                                     marks=marks_dict,
                                     pushable=1
-                                )
+                                ),
+                                style={
+                                    "margin-bottom": "20px"  # Adds space below the slider
+                                }
                             ),
                         ],
                     ),
@@ -82,7 +106,8 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                     id="pairplot-shap-values",
                                     config={"displayModeBar": False},
                                     style={"height": "400px", "width": "600px"}
-                                )
+                                ),
+                                className="d-flex justify-content-center align-items-center"
                             ),
                         ]
                     ),
@@ -95,7 +120,8 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                     config={"displayModeBar": False},
                                     # Adjust as needed for consistent sizing
                                     style={"height": "400px", "width": "700px"}
-                                )
+                                ),
+                                className="d-flex justify-content-center align-items-center"
                             ),
                         ]
                     ),
@@ -108,7 +134,8 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                                     config={"displayModeBar": False},
                                     # Adjust as needed for consistent sizing
                                     style={"height": "400px", "width": "350px"}
-                                )
+                                ),
+                                className="d-flex justify-content-center align-items-center"
                             ),
                         ]
                     ),
@@ -135,11 +162,11 @@ def prepare_map(attr_to_color_by, data, theme="normal"):
     )
     map_fig.update_layout(
         mapbox_style=map_style,
+        paper_bgcolor="#f8f9fa", # to match background color
         legend=dict(orientation="h", yanchor="bottom",
-                    y=1.02, xanchor="right", x=1),
+                    y=1.02, xanchor="center", x=0.5),
         height=700,
-        width=800,
-        margin={"l": 10, "r": 0, "t": 0, "b": 0},  # Remove all margins
+        margin={"l": 10, "r": 10, "t": 0, "b": 0},
     )
 
     # Rewrite Labels
@@ -260,15 +287,15 @@ def update_bar_chart_and_details(click_data, accidents_data):
                         str(unfallklasse), 'Unbekannt')}", style={"backgroundColor": background_color, "borderRadius": "5px", "paddingLeft": "10px"}),
                     html.Br(),
                     html.H2("Unfallbeteiligte"),
-                    *(html.P("Fahrrad")
+                    *(html.Img(src="assets/images/icons8-bicycle-50.png", alt="bicycle", style={ "padding-left": 5, "padding-right": 20}, title="Fahrrad")
                       for _ in [1] if point_data[CONSTS.ISTRAD].values[0] == 1),
-                    *(html.P("PKW")
+                    *(html.Img(src="assets/images/icons8-car-50.png", alt="car", style={ "padding-left": 5, "padding-right": 20}, title="Auto")
                       for _ in [1] if point_data[CONSTS.ISTPKW].values[0] == 1),
-                    *(html.P("Fußgänger")
+                    *(html.Img(src="assets/images/icons8-walking-50.png", alt="pedestrian", style={ "padding-left": 5, "padding-right": 20}, title="Fußgänger")
                       for _ in [1] if point_data[CONSTS.ISTFUSS].values[0] == 1),
-                    *(html.P("Motorrad")
+                    *(html.Img(src="assets/images/icons8-motorcycle-50.png", alt="motorcycle", style={ "padding-left": 5, "padding-right": 20}, title="Motorrad")
                       for _ in [1] if point_data[CONSTS.ISTKRAD].values[0] == 1),
-                    *(html.P("Sonstigem")
+                    *(html.Img(src="assets/images/icons8-train-50.png", alt="misc", style={ "padding-left": 5, "padding-right": 0}, title="Sonstiges")
                       for _ in [1] if point_data[CONSTS.ISTSONSTIG].values[0] == 1),
                     html.Br(),
                     html.H2("Unfallinformationen"),
@@ -276,8 +303,9 @@ def update_bar_chart_and_details(click_data, accidents_data):
                         str(point_data[CONSTS.UNFALLART].values[0]), 'Unbekannt')}"),
                     html.P(f"{rewriteDict[CONSTS.UNFALLTYP].get(
                         str(point_data[CONSTS.UNFALLTYP].values[0]), 'Unbekannt')}"),
-                    html.P(f"Uhrzeit: {
-                           point_data[CONSTS.STUNDE].values[0]} Uhr"),
+                    html.P(f"Zeitraum: {
+                           point_data[CONSTS.STUNDE].values[0]} - {
+                           point_data[CONSTS.STUNDE].values[0]+1} Uhr"),
                     html.Br(),
                     html.H2("Verhältnisse"),
                     html.P(f"{rewriteDict[CONSTS.LICHTVERHAELTNISSE].get(

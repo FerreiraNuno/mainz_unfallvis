@@ -29,7 +29,7 @@ info_button_and_modal = html.Div([
         [
             dbc.ModalHeader(dbc.ModalTitle(
                 "Informationen über den Datensatz"), close_button=True),
-            dbc.ModalBody(
+            dbc.ModalBody([
                 "Die zugrunde liegenden Daten umfassen Verkehrsunfälle in Mainz und wurden verwendet, "
                 "um ein Machine-Learning-Modell (XGBoost) zu trainieren. Dieses Modell klassifiziert Unfälle "
                 "nach ihrem Ausgang in drei Kategorien: Unfälle mit Leichtverletzten, Schwerverletzten und "
@@ -39,9 +39,15 @@ info_button_and_modal = html.Div([
                 "Straßen- und Lichtverhältnisse. Zusätzlich wurden SHAP-Werte berechnet, um den Einfluss "
                 "jedes Merkmals auf die Modellvorhersagen zu erklären und die Transparenz zu erhöhen. "
                 "Durch die Integration von Unsicherheitsfaktoren und erklärbarer KI bietet die Analyse eine "
-                "detaillierte Grundlage für die Bewertung und Verbesserung der Verkehrssicherheit."
-            ),
+                "detaillierte Grundlage für die Bewertung und Verbesserung der Verkehrssicherheit.",
+                html.Hr(),  # Horizontal rule for separation
 
+                html.H5("Icon Attribution"),
+                html.P([
+                    "Icons used in this project are provided by", 
+                    html.A("Icons8", href="https://icons8.com/icons", target="_blank"), "."
+                ])
+            ]),
         ],
         id="info-modal",
         is_open=False,
