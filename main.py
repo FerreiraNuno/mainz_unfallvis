@@ -63,10 +63,11 @@ def toggle_modal(info_btn_clicks):
     Input("year_range_slider", "value"),
     Input("highlighting_dropdown", "value"),
     Input("participants_checklist", "value"),
-    Input("theme-dropdown", "value")
+    Input("theme-dropdown", "value"),
+    Input("toggle-map-theme_bright", "value"),
 )
-def update_map_callback(values, highlighting_dropdown, participants_checklist, selected_theme):
-    return update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly, selected_theme)
+def update_map_callback(values, highlighting_dropdown, participants_checklist, selected_theme, selected_bright_map_theme):
+    return update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly, selected_theme, selected_bright_map_theme)
 
 
 # Callback for bar chart and details
@@ -75,19 +76,21 @@ def update_map_callback(values, highlighting_dropdown, participants_checklist, s
         Output("bar-chart-predicted-accident-class", "figure"),
         Output("details-row", "children"),
     ],
-    Input("map", "clickData")
+    Input("map", "clickData"),
+    Input("theme-dropdown", "value"),
 )
-def update_bar_chart_callback(click_data):
-    return update_bar_chart_and_details(click_data, accidents_data)
+def update_bar_chart_callback(click_data, theme):
+    return update_bar_chart_and_details(click_data, accidents_data, theme)
 
 
 # Callback for the pairplot/scatter plot
 @app.callback(
     Output("pairplot-shap-values", "figure"),
-    Input("map", "clickData")
+    Input("map", "clickData"),
+    Input("theme-dropdown", "value"),
 )
-def update_pairplot_callback(click_data):
-    return update_scatter_plot(click_data, accidents_data)
+def update_pairplot_callback(click_data, theme):
+    return update_scatter_plot(click_data, accidents_data, theme)
 
 
 # Callback for the uncertainty graph

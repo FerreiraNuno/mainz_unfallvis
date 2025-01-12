@@ -119,7 +119,7 @@ def update_overview_graph(selected_chart, accidents_data):
             # Setze Index für MultiIndex-Gruppierung
             .set_index([CONSTS.JAHR, CONSTS.UNFALLKLASSE_WAHR])
             .unstack(fill_value=0)  # Fehlende Kombinationen mit 0 auffüllen
-            .stack()  # MultiIndex zurück in eine flache Struktur konvertieren
+            .stack(future_stack=True)  # MultiIndex zurück in eine flache Struktur konvertieren
             .reset_index()
         )
         line_fig = px.line(

@@ -7,7 +7,20 @@ import dash_bootstrap_components as dbc
 import consts as CONSTS
 import plotly.express as px
 from config import *
+import dash_daq as daq
 
+theme_dropdown = dcc.Dropdown(
+    id="theme-dropdown",
+    options=[
+        {"label": "Normal", "value": "normal"},
+        {"label": "Protanopia", "value": "protanopia"},
+        {"label": "Tritanopia", "value": "tritanopia"},
+    ],
+    value="normal",
+    clearable=False,
+    style={"marginRight": "10px", "fontWeight": "bold",
+           "width": "200px", "color": "black"}
+)
 
 def render_map_tab(marks_dict, accidents_data, date_range_monthly):
     return html.Div(
@@ -15,19 +28,36 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
             dbc.Row(
                 [
                     dbc.Col(
-                        [
-                            html.Div(
-                                dcc.Dropdown(
-                                    highlighting_dropdown,
-                                    id="highlighting_dropdown",
-                                    searchable=False,
-                                    value=highlighting_dropdown[0],
-                                ),
-                                 style={
-                                    "width": "80%", 
-                                    "margin": "0 auto", 
-                                    "padding": "10px",  
-                                }
+                        [   
+                            dbc.Row([
+                                dbc.Col(
+                                    html.Div(
+                                        dcc.Dropdown(
+                                            highlighting_dropdown,
+                                            id="highlighting_dropdown",
+                                            searchable=False,
+                                            clearable=False,
+                                            value=highlighting_dropdown[0],
+                                        ),
+                                        style={
+                                            "width": "90%", 
+                                            "margin": "0 auto", 
+                                            "padding": "10px",  
+                                        }),
+                                    ), 
+                                dbc.Col(
+                                    html.Div([
+                                            daq.ToggleSwitch(
+                                                    id="toggle-map-theme_bright",
+                                                    label=['Dark', 'Bright'],
+                                                    value=False,
+                                                    style={"display": "flex", "align-items": "center"}
+                                                    ),
+                                        ]),
+                                        width=3
+                                ), 
+                            ],
+                            className="hstack gap-1"
                             ),
                             dbc.Row([
                                 dbc.Col(
@@ -89,12 +119,17 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
                         ],
                     ),
                     dbc.Col(
-                        [
+                        [   
+                            html.Div([
+                                html.Div("Farbmodus:", style={"display": "inline-block",
+                                                            "color": "gray"}),
+                                theme_dropdown
+                            ], style={"display": "flex", "flexDirection": "row", "alignItems": "baseline", "gap": "20px", "padding":"10px"}),
                             html.Div(id="details-row")
                         ],
-                        style={"alignItems": "end"}
-                    )
+                    ),
                 ],
+                
             ),
 
             dbc.Row(
@@ -146,8 +181,11 @@ def render_map_tab(marks_dict, accidents_data, date_range_monthly):
     )
 
 
-def prepare_map(attr_to_color_by, data, theme="normal"):
-    map_style = "https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json"
+def prepare_map(attr_to_color_by, data, theme="normal", selected_bright_map_theme=False):
+    if not selected_bright_map_theme:
+        map_style = "https://tiles-eu.stadiamaps.com/styles/alidade_smooth_dark.json"
+    else:
+        map_style = "https://tiles-eu.stadiamaps.com/styles/alidade_smooth.json"
     map_fig = px.scatter_mapbox(
         data,
         lat=CONSTS.LATITUDE,
@@ -180,7 +218,7 @@ def prepare_map(attr_to_color_by, data, theme="normal"):
     return map_fig
 
 
-def update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly, theme="normal"):
+def update_map(values, highlighting_dropdown, participants_checklist, accidents_data, date_range_monthly, theme="normal", selected_bright_map_theme=False):
     filtered_data = accidents_data
     if values is not None:
         marks_dict = dict(date_range_monthly)
@@ -200,7 +238,7 @@ def update_map(values, highlighting_dropdown, participants_checklist, accidents_
                 lambda x: (
                     (x[participant] == 1)
                 )]
-    return prepare_map(highlighting_dropdown, filtered_data, theme)
+    return prepare_map(highlighting_dropdown, filtered_data, theme, selected_bright_map_theme)
 
 
 def update_particpants_checklist(click_data, accidents_data):
@@ -231,7 +269,7 @@ def update_particpants_checklist(click_data, accidents_data):
     return []
 
 
-def update_bar_chart_and_details(click_data, accidents_data):
+def update_bar_chart_and_details(click_data, accidents_data, theme="normal"):
     if click_data:
         clicked_lat = click_data["points"][0]["lat"]
         clicked_lon = click_data["points"][0]["lon"]
@@ -246,7 +284,7 @@ def update_bar_chart_and_details(click_data, accidents_data):
             bar_data = pd.DataFrame(
                 {
                     "Unfallklasse Vorhersage": [
-                        "Tödlicher Ausgang",
+                        "Verstorben",
                         "Schwerverletzte",
                         "Leichtverletzte"
                     ],
@@ -273,16 +311,16 @@ def update_bar_chart_and_details(click_data, accidents_data):
             )
 
             fig.update_yaxes(title_text="Berechnete Wahrscheinlichkeit in %")
-            fig.update_traces(marker_color=["red", "orange", "green"])
+            fig.update_traces(marker_color=list(customColoringMap[theme].get(CONSTS.UNFALLKLASSE_WAHR+"_REPLACED").values()))
+            fig.update_layout({
+                "paper_bgcolor": "rgba(0, 0, 0, 0)"
+            })
 
             # Update the details row
             unfallklasse = point_data[CONSTS.UNFALLKLASSE_WAHR].values[0]
-            background_color = "red" if unfallklasse == "0" else "yellow" if unfallklasse == "1" else "green"
+            background_color = customColoringMap[theme].get(CONSTS.UNFALLKLASSE_WAHR)[unfallklasse]
             details = dbc.Row([
-                dbc.Col(html.Div([
-                    html.Br(),
-                    html.Br(),
-                    html.Br(),
+                dbc.Col(html.Div([              
                     html.H1(f"{rewriteDict[CONSTS.UNFALLKLASSE_WAHR].get(
                         str(unfallklasse), 'Unbekannt')}", style={"backgroundColor": background_color, "borderRadius": "5px", "paddingLeft": "10px"}),
                     html.Br(),
@@ -303,9 +341,8 @@ def update_bar_chart_and_details(click_data, accidents_data):
                         str(point_data[CONSTS.UNFALLART].values[0]), 'Unbekannt')}"),
                     html.P(f"{rewriteDict[CONSTS.UNFALLTYP].get(
                         str(point_data[CONSTS.UNFALLTYP].values[0]), 'Unbekannt')}"),
-                    html.P(f"Zeitraum: {
-                           point_data[CONSTS.STUNDE].values[0]} - {
-                           point_data[CONSTS.STUNDE].values[0]+1} Uhr"),
+                    html.P(f"Zeitraum: {point_data[CONSTS.STUNDE].values[0]} - {point_data[CONSTS.STUNDE].values[0]+1} Uhr an einem "
+                            + ("Wochen" if point_data[CONSTS.TAGKATEGORIE].values[0] in  "1" else "Wochenend")+"tag."),
                     html.Br(),
                     html.H2("Verhältnisse"),
                     html.P(f"{rewriteDict[CONSTS.LICHTVERHAELTNISSE].get(
@@ -322,7 +359,7 @@ def update_bar_chart_and_details(click_data, accidents_data):
     return no_update, no_update
 
 
-def update_scatter_plot(click_data, accidents_data):
+def update_scatter_plot(click_data, accidents_data, theme="normal"):
     if click_data:
         clicked_lat = click_data["points"][0]["lat"]
         clicked_lon = click_data["points"][0]["lon"]
@@ -413,17 +450,15 @@ def update_scatter_plot(click_data, accidents_data):
                 y="SHAP-Wert",
                 color="Unfallklasse",
                 title="Einfluss der Features auf die Vorhersage",
-                color_discrete_map={
-                    "Verstorben": "red",
-                    "Schwerverletzt": "orange",
-                    "Leichtverletzt": "green",
-                },
+                color_discrete_map=customColoringMap[theme].get(CONSTS.UNFALLKLASSE_WAHR+"_REPLACED"),
                 hover_data=["Feature"],
             )
             fig.update_yaxes(title_text="SHAP-Wert")
             fig.update_xaxes(title_text="Feature")
             fig.update_traces(marker=dict(size=10))
-
+            fig.update_layout({
+                "paper_bgcolor": "rgba(0, 0, 0, 0)"
+            })
             return fig
     return no_update
 
@@ -452,6 +487,9 @@ def update_uncertainty_plot(click_data, accidents_data):
             fig.update_yaxes(title_text="Unsicherheitsfaktor", range=[0, 1])
             fig.update_xaxes(title_text="")
             fig.update_traces(marker_color="purple", width=0.5)
+            fig.update_layout({
+                "paper_bgcolor": "rgba(0, 0, 0, 0)"
+            })
 
             return fig
     return no_update

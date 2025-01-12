@@ -93,6 +93,11 @@ customColoringMap = {
             "1": "orange",
             "2": "green",
         },
+        CONSTS.UNFALLKLASSE_WAHR+"_REPLACED": {
+            "Verstorben": "red",
+            "Schwerverletzt": "orange",
+            "Leichtverletzt": "green",
+        },
         CONSTS.LICHTVERHAELTNISSE: {
             "0": "rgb(255, 223, 0)",
             "1": "rgb(255, 140, 0)",
@@ -153,6 +158,11 @@ customColoringMap = {
             "1": "yellow",
             "2": "blue",
         },
+        CONSTS.UNFALLKLASSE_WAHR+"_REPLACED": {
+            "Verstorben": "red",
+            "Schwerverletzt": "yellow",
+            "Leichtverletzt": "blue",
+        },
         CONSTS.LICHTVERHAELTNISSE: {
             "0": "rgb(200, 200, 50)",
             "1": "rgb(200, 120, 50)",
@@ -212,6 +222,11 @@ customColoringMap = {
             "0": "red",
             "1": "orange",
             "2": "teal",
+        },
+        CONSTS.UNFALLKLASSE_WAHR+"_REPLACED": {
+            "Verstorben": "red",
+            "Schwerverletzt": "orange",
+            "Leichtverletzt": "teal",
         },
         CONSTS.LICHTVERHAELTNISSE: {
             "0": "rgb(200, 200, 80)",

@@ -7,6 +7,8 @@
 Dieses Projekt umfasst die Entwicklung eines interaktiven Dashboards zur Analyse von Verkehrsunfällen in Mainz. 
 Grundlage des Dashboards sind die bereitgestellten Unfalldaten in der `Verkehrsunfalldaten.csv`.
 
+Dieses Projekt ist im Rahmen des Moduls Informationsvisualisierung im WS 2024/25 entstanden.
+
 ## Zielgruppe
 
 - **Data Scientists**
@@ -26,7 +28,16 @@ Grundlage des Dashboards sind die bereitgestellten Unfalldaten in der `Verkehrsu
    - Visualisierung der SHAP-Werte punktuell für einzelne Unfälle.
 
 4. **Interaktive Analyse**:
-- Highlighting und Filtern nach Lichtbedingungen, Straßenbeschaffenheit, Unfallbeteiligten, Unfallklasse, Wetterbedingungen, Tageszeit ...
+   - Highlighting und Filtern nach Lichtbedingungen, Straßenbeschaffenheit, Unfallbeteiligten, Unfallklasse, Wetterbedingungen, Tageszeit ...
+
+### Ausblick
+Ein Ausblick auf weitere umsetzbare, aber aufgrund der zeitlichen Einschränkung nicht umgesetzte, Features.
+
+   - Gruppierung von Datenpunkten auf der Kart
+   - Hervorheben des ausgewählten Datenpunkts
+   - Mehrfachauswahl von Datenpunkte für akkumulierte Statistiken
+   - Vergleichen von Zeiträumen
+   - Dynamisches Anzeigen von Statistiken anhand der ausgewählten/gefilterten Attribute
 
 ## Getting started
 1. **Voraussetzungen**:
