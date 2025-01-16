@@ -108,11 +108,11 @@ customColoringMap = {
             "1": "rgb(70, 130, 180)",
             "2": "rgb(255, 250, 250)"
         },
-        CONSTS.STRASSENART: {
+        CONSTS.TAGKATEGORIE: {
             "0": "rgb(255, 69, 0)",
             "1": "rgb(30, 144, 255)"
         },
-        CONSTS.TAGKATEGORIE: {
+        CONSTS.STRASSENART: {
             "construction": "rgb(255, 165, 0)",
             "living_street": "rgb(50, 205, 50)",
             "motorway": "rgb(0, 0, 255)",
@@ -173,11 +173,11 @@ customColoringMap = {
             "1": "rgb(50, 100, 150)",
             "2": "rgb(230, 230, 230)"
         },
-        CONSTS.STRASSENART: {
+        CONSTS.TAGKATEGORIE: {
             "0": "rgb(200, 50, 30)",
             "1": "rgb(60, 120, 180)"
         },
-        CONSTS.TAGKATEGORIE: {
+        CONSTS.STRASSENART: {
             "construction": "rgb(200, 140, 50)",
             "living_street": "rgb(80, 160, 80)",
             "motorway": "rgb(50, 50, 180)",
@@ -236,13 +236,13 @@ customColoringMap = {
         CONSTS.STRASSENVERHAELTNISSE: {
             "0": "rgb(60, 120, 60)",
             "1": "rgb(70, 120, 150)",
-            "2": "rgb(240, 240, 240)"
+            "2": "rgb(212, 212, 212)"
         },
-        CONSTS.STRASSENART: {
+        CONSTS.TAGKATEGORIE: {
             "0": "rgb(210, 60, 50)",
             "1": "rgb(70, 140, 180)"
         },
-        CONSTS.TAGKATEGORIE: {
+        CONSTS.STRASSENART: {
             "construction": "rgb(210, 150, 50)",
             "living_street": "rgb(80, 170, 80)",
             "motorway": "rgb(60, 70, 170)",
